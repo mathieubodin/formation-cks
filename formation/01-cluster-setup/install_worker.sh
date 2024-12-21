@@ -59,8 +59,6 @@ sudo apt remove -y docker.io containerd kubelet kubeadm kubectl || true
 sudo apt autoremove -y
 sudo systemctl daemon-reload
 
-
-
 ### install podman
 # . /etc/os-release
 # echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:testing.list
@@ -72,7 +70,6 @@ sudo systemctl daemon-reload
 # [registries.search]
 # registries = ['docker.io']
 # EOF
-
 
 ### install packages
 sudo apt install -y apt-transport-https ca-certificates
@@ -113,7 +110,6 @@ net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 sudo sysctl --system
 sudo mkdir -p /etc/containerd
-
 
 ### containerd config
 # cat <<EOF | sudo tee /etc/containerd/config.toml
@@ -161,7 +157,6 @@ runtime-endpoint: unix:///run/containerd/containerd.sock
 EOF
 }
 
-
 ### kubelet should use containerd
 {
 cat <<EOF | sudo tee /etc/default/kubelet
@@ -169,21 +164,16 @@ KUBELET_EXTRA_ARGS="--container-runtime-endpoint unix:///run/containerd/containe
 EOF
 }
 
-
-
 ### start services
 sudo systemctl daemon-reload
 sudo systemctl enable containerd
 sudo systemctl restart containerd
 sudo systemctl enable kubelet && sudo systemctl start kubelet
 
-
-
 ### init k8s
 sudo kubeadm reset -f
 sudo systemctl daemon-reload
 sudo service kubelet start
-
 
 echo
 echo "EXECUTE ON MASTER: kubeadm token create --print-join-command --ttl 1h"

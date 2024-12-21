@@ -98,20 +98,20 @@ Installation scripts are provided by `killer-sh` in the following links:
 - [Master](https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/cluster-setup/latest/install_master.sh)
 - [Worker](https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/cluster-setup/latest/install_worker.sh)
 
-They have been downloaded, adapted and saved in the `cluster-setup` directory.
+They have been downloaded, adapted and saved in the `formation/01-cluster-setup` directory.
 
 In the first terminal, move to Vagrantfile directory and run the following commands:
 
 ```shell
 vagrant ssh vm1
-bash cluster-setup/install_cks-master.sh
+bash 01-cluster-setup/install_master.sh
 ```
 
 Open a new terminal, move to Vagrantfile directory and run the following commands:
 
 ```shell
 vagrant ssh vm2
-bash cluster-setup/install_cks-worker.sh
+bash 01-cluster-setup/install_worker.sh
 ```
 
 #### Network Security Policy
@@ -120,18 +120,28 @@ bash cluster-setup/install_cks-worker.sh
 - Default Deny
 - Scenarios
 
-#### Hans-on
+#### Hands-on
 
 Install `helm`:
 
 ```shell
-wget https://get.helm.sh/helm-v3.16.4-linux-amd64.tar.gz
+curl -Lo . https://get.helm.sh/helm-v3.16.4-linux-amd64.tar.gz
 tar -xf helm-v3.16.4-linux-amd64.tar.gz
 sudo cp linux-amd64/helm /usr/local/bin/
+rm -rf linux-amd64/ helm-v3.16.4-linux-amd64.tar.gz
 ```
 
-Install `helm-controller`:
+Install `kubernetes-dashboard`:
+
+```shell
+# Add kubernetes-dashboard repository
+helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+# Deploy a Helm Release named "kubernetes-dashboard" using the kubernetes-dashboard chart
+helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+
+##### Extra: *install `helm-controller`*
 
 ```shell
 helm install helm-controller oci://registry.gitlab.com/xrow-public/helm-controller/charts/helm-controller --version 0.0.5 --namespace kube-system
 ```
+

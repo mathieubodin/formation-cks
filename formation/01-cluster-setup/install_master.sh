@@ -149,14 +149,12 @@ sudo mkdir -p /etc/containerd
 containerd config default | sudo tee /etc/containerd/config.toml
 sudo sed -e 's/SystemdCgroup = false/SystemdCgroup = true/g' -i /etc/containerd/config.toml
 
-
 ### crictl uses containerd as default
 {
 cat <<EOF | sudo tee /etc/crictl.yaml
 runtime-endpoint: unix:///run/containerd/containerd.sock
 EOF
 }
-
 
 ### kubelet should use containerd
 {
@@ -165,14 +163,11 @@ KUBELET_EXTRA_ARGS="--container-runtime-endpoint unix:///run/containerd/containe
 EOF
 }
 
-
-
 ### start services
 sudo systemctl daemon-reload
 sudo systemctl enable containerd
 sudo systemctl restart containerd
 sudo systemctl enable kubelet && sudo systemctl start kubelet
-
 
 ### init k8s
 sudo rm /root/.kube/config || true
@@ -181,7 +176,7 @@ sudo kubeadm init --kubernetes-version=${KUBE_VERSION} \
     --ignore-preflight-errors=NumCPU \
     --skip-token-print \
     --service-cidr 10.96.0.0/16 \
-    --pod-network-cidr 10.240.0.0/16
+    --pod-network-cidr 10.244.0.0/16
 
 mkdir -p ~/.kube
 sudo cp -f /etc/kubernetes/admin.conf ~/.kube/config
