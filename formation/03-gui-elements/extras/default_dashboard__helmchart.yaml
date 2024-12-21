@@ -1,0 +1,14 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: default-dashboard
+  namespace: default
+spec:
+  chart: kubernetes-dashboard
+  repo: https://kubernetes.github.io/dashboard
+  targetNamespace: default
+  createNamespace: false
+  backoffLimit: 1
+  set:
+    serviceAccount.create: "false"
+    serviceAccount.name: kubernetes-dashboard

@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-np
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      run: frontend
+  policyTypes:
+  - Egress
+  - Ingress
+  ingress:
+  - from:
+    ports:
+    - port: 80
+      protocol: TCP
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          run: backend
+    ports:
+    - protocol: TCP
+      port: 80
