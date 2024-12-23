@@ -4,6 +4,7 @@
 
 [Kubernetes CKS Full Course Theory + Practice + Browser Scenarios](https://www.youtube.com/watch?v=d9xfB5qaOfg)
 [Kubernetes Security Best Practices - Ian Lewis, Google](https://youtu.be/wqsUfvRyYpw?si=vrIh_1r18fpo8i3K)
+[OpenSSL Certificate Authority](https://jamielinux.com/docs/openssl-certificate-authority)
 
 ## Introduction and welcome
 
@@ -120,7 +121,7 @@ bash 01-cluster-setup/install_worker.sh
 - Default Deny
 - Scenarios
 
-#### Hands-on
+##### Hands-on GUI elements
 
 Install `helm`:
 
@@ -138,10 +139,62 @@ Install `kubernetes-dashboard`:
 helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
 # Deploy a Helm Release named "kubernetes-dashboard" using the kubernetes-dashboard chart
 helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+```
 
-##### Extra: *install `helm-controller`*
+###### Extra: *install `helm-controller`*
 
 ```shell
 helm install helm-controller oci://registry.gitlab.com/xrow-public/helm-controller/charts/helm-controller --version 0.0.5 --namespace kube-system
 ```
 
+#### Secure Ingress
+
+##### Hands-on Secure Ingress
+
+Install nginx ingress controller:
+
+```shell
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-nginx --set controller.kind=DaemonSet --set controller.service.enabled=false --set controller.tolerations[0].key=node-role.kubernetes.io/control-plane --set controller.tolerations[0].operator=Exists --set controller.tolerations[0].effect=NoSchedule --set controller.hostNetwork=true --set controller.admissionWebhooks.service.enabled=true
+```
+
+Create a local Certificate Authority (CA):
+
+From this `README.md` folder, run the following commands:
+
+```shell
+# Create the root key
+openssl genrsa -out formation/pki/private/ca.key.pem 4096
+
+# Assign the relevant permissions
+chmod 400 formation/pki/private/ca.key.pem
+
+# Create the root certificate
+openssl req -new -x509 -days 365 -sha256 -extensions v3_ca \
+  -config formation/pki/openssl.cnf \
+  -key formation/pki/private/ca.key.pem \
+  -out formation/pki/certs/ca.cert.pem
+
+# Create mandatory files if missing
+[[ ! -f formation/pki/index.txt ]] && touch formation/pki/index.txt
+[[ ! -f formation/pki/serial ]] && echo 1000 > formation/pki/serial
+
+# Create a key
+openssl genrsa -out formation/pki/private/local-ingress.key.pem 4096
+
+# Assign relevant permissions
+chmod 400 formation/pki/private/local-ingress.key.pem
+
+# Create a certificate signing request
+openssl req -new -sha256 -config formation/pki/127.0.0.1.nip.io.cnf \
+    -key formation/pki/private/local-ingress.key.pem \
+    -out formation/pki/csr/local-ingress.csr.pem
+
+# Sign the certificate
+openssl ca -batch -extensions server_cert -days 30 -notext -md sha256 \
+    -config formation/pki/127.0.0.1.nip.io.cnf \
+    -in formation/pki/csr/local-ingress.csr.pem \
+    -out formation/pki/certs/local-ingress.cert.pem
+```
+
+Once generated, update your local trusted certificate authorities with the `formation/pki/certs/ca.cert.pem` file.

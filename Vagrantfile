@@ -1,5 +1,6 @@
 Vagrant.configure("2") do |config|
     config.vm.synced_folder '.', '/vagrant', disabled: true
+    config.ssh.extra_args = ["-t", "cd /home/vagrant/cks; bash --login"]
 
     config.vm.define "vm1" do |vm_config|
         vm_config.vm.provider "virtualbox" do |vb, override|
@@ -8,7 +9,7 @@ Vagrant.configure("2") do |config|
             vb.gui = false
             vb.check_guest_additions = false
             vb.cpus = 2
-            vb.memory = 4096
+            vb.memory = 3072
             vb.customize ["modifyvm", :id, "--groups", "/cks-cluster"]
             vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
             override.vm.disk :disk, primary: true, size: "50GB"
@@ -20,7 +21,7 @@ Vagrant.configure("2") do |config|
             override.vm.box = "alvistack/ubuntu-20.04"
             override.vm.box_version = "20241215.1.1"
             lv.default_prefix = "formation-cks-"
-            lv.memory = 4096
+            lv.memory = 3072
             lv.cpus = 2
             lv.forward_ssh_port = true
             lv.nested = true
@@ -40,8 +41,8 @@ Vagrant.configure("2") do |config|
         end
 
         vm_config.vm.hostname = "cks-master"
-        vm_config.vm.network "forwarded_port", guest: 8080, host: 8080, auto_correct: true
-        vm_config.vm.network "forwarded_port", guest: 8443, host: 8443, auto_correct: true
+        vm_config.vm.network "forwarded_port", guest: 80, host: 80, auto_correct: true
+        vm_config.vm.network "forwarded_port", guest: 443, host: 443, auto_correct: true
         # (30000..32767).each do |port|
         #     vm_config.vm.network "forwarded_port", guest: port, host: port, auto_correct: true
         # end
@@ -59,7 +60,7 @@ Vagrant.configure("2") do |config|
             vb.gui = false
             vb.check_guest_additions = false
             vb.cpus = 2
-            vb.memory = 4096
+            vb.memory = 3072
             vb.customize ["modifyvm", :id, "--groups", "/cks-cluster"]
             vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
             override.vm.disk :disk, primary: true, size: "50GB"
@@ -71,7 +72,7 @@ Vagrant.configure("2") do |config|
             override.vm.box = "alvistack/ubuntu-20.04"
             override.vm.box_version = "20241215.1.1"
             lv.default_prefix = "formation-cks-"
-            lv.memory = 4096
+            lv.memory = 3072
             lv.cpus = 2
             lv.forward_ssh_port = true
             lv.nested = true

@@ -1,0 +1,8 @@
+*
+!.gitignore
+!certs
+!crl
+!csr
+!newcerts
+!private
+!*.cnf
