@@ -126,7 +126,7 @@ bash 01-cluster-setup/install_worker.sh
 Install `helm`:
 
 ```shell
-curl -Lo . https://get.helm.sh/helm-v3.16.4-linux-amd64.tar.gz
+curl -Lo helm-v3.16.4-linux-amd64.tar.gz https://get.helm.sh/helm-v3.16.4-linux-amd64.tar.gz
 tar -xf helm-v3.16.4-linux-amd64.tar.gz
 sudo cp linux-amd64/helm /usr/local/bin/
 rm -rf linux-amd64/ helm-v3.16.4-linux-amd64.tar.gz
@@ -198,3 +198,9 @@ openssl ca -batch -extensions server_cert -days 30 -notext -md sha256 \
 ```
 
 Once generated, update your local trusted certificate authorities with the `formation/pki/certs/ca.cert.pem` file.
+
+To create a secret with the certificate and key, run the following command:
+
+```shell
+k create secret tls secure-ingress --cert=$HOME/cks/pki/certs/local-ingress.cert.pem --key=$HOME/cks/pki/private/local-ingress.key.pem
+```
