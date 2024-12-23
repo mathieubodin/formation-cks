@@ -120,7 +120,7 @@ bash 01-cluster-setup/install_worker.sh
 - Default Deny
 - Scenarios
 
-#### Hands-on
+##### Hands-on GUI elements
 
 Install `helm`:
 
@@ -138,10 +138,35 @@ Install `kubernetes-dashboard`:
 helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
 # Deploy a Helm Release named "kubernetes-dashboard" using the kubernetes-dashboard chart
 helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+```
 
-##### Extra: *install `helm-controller`*
+###### Extra: *install `helm-controller`*
 
 ```shell
 helm install helm-controller oci://registry.gitlab.com/xrow-public/helm-controller/charts/helm-controller --version 0.0.5 --namespace kube-system
 ```
 
+#### Secure Ingress
+
+##### Hands-on Secure Ingress
+
+Install nginx ingress controller:
+
+```shell
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-nginx --set controller.kind=DaemonSet --set controller.service.enabled=false --set controller.tolerations[0].key=node-role.kubernetes.io/control-plane --set controller.tolerations[0].operator=Exists --set controller.tolerations[0].effect=NoSchedule --set controller.hostNetwork=true --set controller.admissionWebhooks.service.enabled=true
+```
+
+Create a local Certificate Authority (CA):
+
+Move to the `formation/pki` folder then run the following commands:
+
+```shell
+# Create the keypair (private key and CSR) for the CA
+openssl req -new -newkey rsa:4096 -keyout private/cakey.pem -out careq.pem -config formation_cks.cnf
+
+# Self-sign the CSR to make your CA certificate
+openssl ca -create_serial -out cacert.pem -days 365 -keyfile private/cakey.pem -selfsign -extensions v3_ca_has_san -config formation_cks.cnf -infiles careq.pem 
+```
+
+Once generated, update your local

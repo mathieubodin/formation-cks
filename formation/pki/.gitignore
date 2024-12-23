@@ -1,0 +1,7 @@
+*
+!.gitignore
+!certdb
+!certreqs
+!crl
+!private
+!*.cnf

@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: secure-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: 127.0.0.1.nip.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: service1
+            port:
+              number: 80
+        path: /service1
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: service2
+            port:
+              number: 80
+        path: /service2
+        pathType: ImplementationSpecific
+
