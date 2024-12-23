@@ -4,6 +4,7 @@
 
 [Kubernetes CKS Full Course Theory + Practice + Browser Scenarios](https://www.youtube.com/watch?v=d9xfB5qaOfg)
 [Kubernetes Security Best Practices - Ian Lewis, Google](https://youtu.be/wqsUfvRyYpw?si=vrIh_1r18fpo8i3K)
+[OpenSSL Certificate Authority](https://jamielinux.com/docs/openssl-certificate-authority)
 
 ## Introduction and welcome
 
@@ -159,14 +160,41 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --create-namesp
 
 Create a local Certificate Authority (CA):
 
-Move to the `formation/pki` folder then run the following commands:
+From this `README.md` folder, run the following commands:
 
 ```shell
-# Create the keypair (private key and CSR) for the CA
-openssl req -new -newkey rsa:4096 -keyout private/cakey.pem -out careq.pem -config formation_cks.cnf
+# Create the root key
+openssl genrsa -out formation/pki/private/ca.key.pem 4096
 
-# Self-sign the CSR to make your CA certificate
-openssl ca -create_serial -out cacert.pem -days 365 -keyfile private/cakey.pem -selfsign -extensions v3_ca_has_san -config formation_cks.cnf -infiles careq.pem 
+# Assign the relevant permissions
+chmod 400 formation/pki/private/ca.key.pem
+
+# Create the root certificate
+openssl req -new -x509 -days 365 -sha256 -extensions v3_ca \
+  -config formation/pki/openssl.cnf \
+  -key formation/pki/private/ca.key.pem \
+  -out formation/pki/certs/ca.cert.pem
+
+# Create mandatory files if missing
+[[ ! -f formation/pki/index.txt ]] && touch formation/pki/index.txt
+[[ ! -f formation/pki/serial ]] && echo 1000 > formation/pki/serial
+
+# Create a key
+openssl genrsa -out formation/pki/private/local-ingress.key.pem 4096
+
+# Assign relevant permissions
+chmod 400 formation/pki/private/local-ingress.key.pem
+
+# Create a certificate signing request
+openssl req -new -sha256 -config formation/pki/127.0.0.1.nip.io.cnf \
+    -key formation/pki/private/local-ingress.key.pem \
+    -out formation/pki/csr/local-ingress.csr.pem
+
+# Sign the certificate
+openssl ca -batch -extensions server_cert -days 30 -notext -md sha256 \
+    -config formation/pki/127.0.0.1.nip.io.cnf \
+    -in formation/pki/csr/local-ingress.csr.pem \
+    -out formation/pki/certs/local-ingress.cert.pem
 ```
 
-Once generated, update your local
+Once generated, update your local trusted certificate authorities with the `formation/pki/certs/ca.cert.pem` file.

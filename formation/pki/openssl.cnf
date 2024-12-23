@@ -18,7 +18,7 @@ certificate       = $dir/certs/ca.cert.pem
 
 # For certificate revocation lists.
 crlnumber         = $dir/crlnumber
-crl               = $dir/crl/crl.pem
+crl               = $dir/crl/ca.crl.pem
 crl_extensions    = crl_ext
 default_crl_days  = 30
 
@@ -33,7 +33,6 @@ policy            = policy_strict
 unique_subject    = no
 
 [ policy_strict ]
-# The root CA should only sign intermediate certificates that match.
 # See the POLICY FORMAT section of `man ca`.
 countryName             = match
 stateOrProvinceName     = match
@@ -43,7 +42,6 @@ commonName              = supplied
 emailAddress            = optional
 
 [ policy_loose ]
-# Allow the intermediate CA to sign a more diverse range of certificates.
 # See the POLICY FORMAT section of the `ca` man page.
 countryName             = optional
 stateOrProvinceName     = optional
@@ -59,7 +57,6 @@ default_bits        = 4096
 prompt              = no
 distinguished_name  = req_distinguished_name
 string_mask         = utf8only
-req_extensions      = v3_req
 
 # SHA-1 is deprecated, so use SHA-2 instead.
 default_md          = sha256
@@ -74,15 +71,8 @@ stateOrProvinceName             = France
 localityName                    = Lingolsheim
 0.organizationName              = Famille
 organizationalUnitName          = BODIN
-commonName                      = local-wildcard-ingress
+commonName                      = local-ca
 emailAddress                    = mathieubodin@icloud.com
-
-[ v3_req ]
-subjectAltName                  = @alt_names
-
-[ alt_names ]
-DNS.1                           = 127.0.0.1.nip.io
-DNS.2                           = *.127.0.0.1.nip.io
 
 [ v3_ca ]
 # Extensions for a typical CA (`man x509v3_config`).
@@ -117,7 +107,6 @@ subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid,issuer:always
 keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
-subjectAltName = @alt_names
 
 [ crl_ext ]
 # Extension for CRLs (`man x509v3_config`).

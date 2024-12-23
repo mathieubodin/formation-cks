@@ -1,7 +1,8 @@
 *
 !.gitignore
-!certdb
-!certreqs
+!certs
 !crl
+!csr
+!newcerts
 !private
 !*.cnf
