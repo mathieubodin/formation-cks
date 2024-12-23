@@ -2,10 +2,10 @@
 
 ## Resources
 
-[Kubernetes CKS Full Course Theory + Practice + Browser Scenarios](https://www.youtube.com/watch?v=d9xfB5qaOfg)
-[Kubernetes Security Best Practices - Ian Lewis, Google](https://youtu.be/wqsUfvRyYpw?si=vrIh_1r18fpo8i3K)
-[Martin White - Consistent Security Controls through CIS Benchmarks](https://youtu.be/53-v3stlnCo?si=-ulNwAyFuU55I9P-)
-[OpenSSL Certificate Authority](https://jamielinux.com/docs/openssl-certificate-authority)
+- [Kubernetes CKS Full Course Theory + Practice + Browser Scenarios](https://www.youtube.com/watch?v=d9xfB5qaOfg)
+- [Kubernetes Security Best Practices - Ian Lewis, Google](https://youtu.be/wqsUfvRyYpw?si=vrIh_1r18fpo8i3K)
+- [Martin White - Consistent Security Controls through CIS Benchmarks](https://youtu.be/53-v3stlnCo?si=-ulNwAyFuU55I9P-)
+- [OpenSSL Certificate Authority](https://jamielinux.com/docs/openssl-certificate-authority)
 
 ## Introduction and welcome
 
