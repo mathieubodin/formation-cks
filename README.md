@@ -156,7 +156,7 @@ Install nginx ingress controller:
 
 ```shell
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-nginx --set controller.kind=DaemonSet --set controller.service.enabled=false --set controller.tolerations[0].key=node-role.kubernetes.io/control-plane --set controller.tolerations[0].operator=Exists --set controller.tolerations[0].effect=NoSchedule --set controller.hostNetwork=true --set controller.admissionWebhooks.service.enabled=true
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-nginx --set controller.kind=DaemonSet --set controller.service.enabled=false --set controller.hostNetwork=true --set controller.admissionWebhooks.service.enabled=true
 ```
 
 Create a local Certificate Authority (CA):
