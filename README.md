@@ -300,6 +300,7 @@ rm -rf checksum kubernetes-server-linux-amd64.tar.gz kubernetes
 
 The following table shows the permissions available and where they are applied:
 
+<!-- markdownlint-disable MD033 -->
 <table>
   <thead>
     <tr>
@@ -337,6 +338,7 @@ The following table shows the permissions available and where they are applied:
         </ul>
     </tr>
 </table>
+<!-- markdownlint-enable MD033 -->
 
 Reminder:
 
