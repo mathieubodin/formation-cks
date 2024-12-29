@@ -14,7 +14,10 @@ Vagrant.configure("2") do |config|
             vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
             override.vm.disk :disk, primary: true, size: "50GB"
             override.vm.synced_folder "./formation", "/home/vagrant/cks"
-            override.vm.network "private_network", ip: "172.16.0.2", hostname: true
+            override.vm.network "private_network", 
+                ip: "172.16.0.2",
+                virtualbox__intnet: "formation-cks",
+                hostname: true
         end
 
         vm_config.vm.provider :libvirt do |lv, override|
@@ -63,7 +66,10 @@ Vagrant.configure("2") do |config|
             vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
             override.vm.disk :disk, primary: true, size: "50GB"
             override.vm.synced_folder "./formation", "/home/vagrant/cks"
-            override.vm.network "private_network", ip: "172.16.0.3", hostname: true
+            override.vm.network "private_network",
+                ip: "172.16.0.3",
+                virtualbox__intnet: "formation-cks",
+                hostname: true
         end
 
         vm_config.vm.provider :libvirt do |lv, override|

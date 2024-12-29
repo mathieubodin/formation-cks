@@ -494,3 +494,26 @@ Restrictions:
 5. Prevent unauthorized access (RBAC)
 6. Prevent pods from accessing API
 7. Apiserver port behind firewall / allowed ip ranges
+
+##### Hands-on Restrict API access
+
+```shell
+vagrant ssh vm1
+cd 11-restrict-api-access
+# Extract ca.crt from kubeconfig
+k config view -o=json --raw=true | jq -r '.clusters[0].cluster["certificate-authority-data"]' | base64 -d | tee ca.cert
+# Extract client pki from kubeconfig
+k config view -o=json --raw=true | jq -r '.users[2].user["client-certificate-data"]' | base64 -d | tee client.cert
+k config view -o=json --raw=true | jq -r '.users[2].user["client-key-data"]' | base64 -d | tee client.key
+# Extract server url from kubeconfig
+export SERVER_URL=$(k config view -o=json --raw=true | jq -r '.clusters[0].cluster["server"]')
+# Test the connection
+curl $SERVER_URL --cacert ca.cert --cert client.cert --key client.key
+```
+
+##### Extra: expose the API server to the outside with Ingress
+
+```shell
+
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-nginx --set controller.kind=DaemonSet --set controller.service.enabled=false --set controller.hostNetwork=true --set controller.admissionWebhooks.service.enabled=true --set controller.allow-snippet-annotations=true
+```
