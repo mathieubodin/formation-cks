@@ -9,19 +9,22 @@ Vagrant.configure("2") do |config|
             vb.gui = false
             vb.check_guest_additions = false
             vb.cpus = 2
-            vb.memory = 3072
+            vb.memory = 2048
             vb.customize ["modifyvm", :id, "--groups", "/cks-cluster"]
             vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
             override.vm.disk :disk, primary: true, size: "50GB"
             override.vm.synced_folder "./formation", "/home/vagrant/cks"
-            override.vm.network "private_network", ip: "172.16.0.2", hostname: true
+            override.vm.network "private_network", 
+                ip: "172.16.0.2",
+                virtualbox__intnet: "formation-cks",
+                hostname: true
         end
 
         vm_config.vm.provider :libvirt do |lv, override|
             override.vm.box = "alvistack/ubuntu-20.04"
             override.vm.box_version = "20241215.1.1"
             lv.default_prefix = "formation-cks-"
-            lv.memory = 3072
+            lv.memory = 2048
             lv.cpus = 2
             lv.forward_ssh_port = true
             lv.nested = true
@@ -58,19 +61,22 @@ Vagrant.configure("2") do |config|
             vb.gui = false
             vb.check_guest_additions = false
             vb.cpus = 2
-            vb.memory = 3072
+            vb.memory = 2048
             vb.customize ["modifyvm", :id, "--groups", "/cks-cluster"]
             vb.customize ['modifyvm', :id, '--nested-hw-virt', 'on']
             override.vm.disk :disk, primary: true, size: "50GB"
             override.vm.synced_folder "./formation", "/home/vagrant/cks"
-            override.vm.network "private_network", ip: "172.16.0.3", hostname: true
+            override.vm.network "private_network",
+                ip: "172.16.0.3",
+                virtualbox__intnet: "formation-cks",
+                hostname: true
         end
 
         vm_config.vm.provider :libvirt do |lv, override|
             override.vm.box = "alvistack/ubuntu-20.04"
             override.vm.box_version = "20241215.1.1"
             lv.default_prefix = "formation-cks-"
-            lv.memory = 3072
+            lv.memory = 2048
             lv.cpus = 2
             lv.forward_ssh_port = true
             lv.nested = true
