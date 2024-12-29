@@ -96,8 +96,11 @@ Vagrant.configure("2") do |config|
         end
 
         vm_config.vm.hostname = "cks-worker"
-        vm_config.vm.network "forwarded_port", guest: 80, host: 80, auto_correct: true
-        vm_config.vm.network "forwarded_port", guest: 443, host: 443, auto_correct: true
+        vm_config.vm.network "forwarded_port", guest: 80, host: 8080, auto_correct: true
+        vm_config.vm.network "forwarded_port", guest: 443, host: 8443, auto_correct: true
+        # (30000..32767).each do |port|
+        #     vm_config.vm.network "forwarded_port", guest: port, host: port, auto_correct: true
+        # end
         vm_config.vm.provision "shell", inline: <<-SHELL
             apt update
             apt upgrade -y
