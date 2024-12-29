@@ -510,10 +510,3 @@ export SERVER_URL=$(k config view -o=json --raw=true | jq -r '.clusters[0].clust
 # Test the connection
 curl $SERVER_URL --cacert ca.cert --cert client.cert --key client.key
 ```
-
-##### Extra: expose the API server to the outside with Ingress
-
-```shell
-
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-nginx --set controller.kind=DaemonSet --set controller.service.enabled=false --set controller.hostNetwork=true --set controller.admissionWebhooks.service.enabled=true --set controller.allow-snippet-annotations=true
-```
