@@ -519,7 +519,39 @@ Here, we focus on upgrading a Kubernetes cluster, created using the `kubeadm` to
 
 ##### Prerequisites
 
-We need a Kubernetes cluster created using `kubeadm`. We will reuse the same process to create the virtual virtual machines: Setup two virtual machines using Vagrant, process with customized scripts to install Kubernetes on each nodes. Use `install_master.sh` and `install_worker` from this folder.
+We need a Kubernetes cluster created using `kubeadm`. We will reuse the same process to create the virtual virtual machines: Setup two virtual machines using Vagrant, process with customized scripts to install Kubernetes on each nodes.
+
+We will use `install_master.sh` and `install_worker` from this folder in order to setup the cluster in a prior version.
+
+First, destroy the existing virtual machines:
+
+```shell
+vagrant destroy -f
+```
+
+Then, recreate the virtual machines and install the cluster:
+
+```shell
+vagrant up
+vagrant reload
+vagrant ssh vm1
+```
+
+Once connected inside the controlplane node, run the following commands:
+
+```shell
+cd 12-upgrade-kubernetes
+bash install_master.sh
+```
+
+Open a new terminal, connect to the worker node and run the following commands:
+
+```shell
+cd 12-upgrade-kubernetes
+bash install_worker.sh
+```
+
+Proceed with the upgrade of the cluster.
 
 ##### Steps
 
