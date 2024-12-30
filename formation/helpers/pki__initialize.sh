@@ -3,6 +3,8 @@
 # Initialize the PKI
 l_pki_root=$( dirname -- "${BASH_SOURCE[0]}" | xargs readlink -f | xargs dirname )/pki
 
+export PKI_ROOT=$l_pki_root
+
 l_pki_certs=${l_pki_root}/certs
 l_pki_crl=${l_pki_root}/crl
 l_pki_csr=${l_pki_root}/csr

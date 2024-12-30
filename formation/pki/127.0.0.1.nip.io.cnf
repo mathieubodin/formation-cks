@@ -1,4 +1,3 @@
-dir = ./formation/pki
 dir = $ENV::PKI_ROOT
 
 [ ca ]
