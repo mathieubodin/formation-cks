@@ -44,6 +44,8 @@ Vagrant.configure("2") do |config|
         end
 
         vm_config.vm.hostname = "cks-master"
+        vm_config.vm.network "forwarded_port", guest: 30080, host: 8080, auto_correct: true
+        vm_config.vm.network "forwarded_port", guest: 30443, host: 8443, auto_correct: true
         vm_config.vm.provision "shell", inline: <<-SHELL
             apt update \
             && apt upgrade -y \
@@ -92,9 +94,7 @@ Vagrant.configure("2") do |config|
                 libvirt__netmask: "255.255.255.0"
         end
 
-        vm_config.vm.hostname = "cks-worker"
-        vm_config.vm.network "forwarded_port", guest: 80, host: 8080, auto_correct: true
-        vm_config.vm.network "forwarded_port", guest: 443, host: 8443, auto_correct: true
+        vm_config.vm.hostname = "cks-worker-1"
         # (30000..32767).each do |port|
         #     vm_config.vm.network "forwarded_port", guest: port, host: port, auto_correct: true
         # end

@@ -211,7 +211,7 @@ echo '********************************************************'
 echo '********************************************************'
 echo
 
-cilium install --version 1.16.5
+cilium install --version 1.16.5 --set ipam.mode=kubernetes
 
 echo
 sleep 3
