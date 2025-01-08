@@ -69,10 +69,8 @@ EOF
     sudo sysctl --system
     sudo mkdir -p /etc/containerd
 
-    containerd config default | sudo tee /etc/containerd/config.toml
-    sudo sed -e 's/SystemdCgroup = false/SystemdCgroup = true/g' -i /etc/containerd/config.toml
-
-    cat <<EOF | sudo tee -a /etc/containerd/config.toml
+    cat <<EOF | sudo tee /etc/containerd/config.toml
+version = 2
 [plugins."io.containerd.runtime.v1.linux"]
   shim_debug = true
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]

@@ -6,6 +6,8 @@
 - [Kubernetes Security Best Practices - Ian Lewis, Google](https://youtu.be/wqsUfvRyYpw?si=vrIh_1r18fpo8i3K)
 - [Martin White - Consistent Security Controls through CIS Benchmarks](https://youtu.be/53-v3stlnCo?si=-ulNwAyFuU55I9P-)
 - [OpenSSL Certificate Authority](https://jamielinux.com/docs/openssl-certificate-authority)
+- [OCI, CRI, ?? : Comprendre le paysage d'exécution des conteneurs dans Kubernetes - Phil Estes, IBM](https://youtu.be/RyXL1zOa8Bw?si=Wy80Kw43zWHlLuWk)
+- [Kata Containers An introduction and overview](https://youtu.be/4gmLXyMeYWI?si=paSt1VNWLqnvFkHH)
 
 ## Introduction and welcome
 
