@@ -78,13 +78,13 @@ DISK: 50GB
 CPU: 2
 RAM: 2GB
 
-VM2: Worker `cks-worker-1`
+VM2: Worker `cks-worker`
 OS: Ubuntu 20.04 LTS
 DISK: 50GB
 CPU: 2
 RAM: 2GB
 
-VM2: Worker `cks-worker-2`
+VM3: Worker `cks-worker-gvisor`
 OS: Ubuntu 20.04 LTS
 DISK: 50GB
 CPU: 2

@@ -49,6 +49,13 @@ sed -i '1s/^/force_color_prompt=yes\n/' ~/.bashrc
 sudo swapoff -a
 sudo sed -i '/\sswap\s/ s/^\(.*\)$/#\1/g' /etc/fstab
 
+l_swap_service=$(systemctl show -p Id swap.target | cut -d= -f2)
+
+if [ -n "$l_swap_service" ]; then
+    sudo systemctl stop $l_swap_service
+    sudo systemctl mask $l_swap_service
+fi
+
 ### remove packages
 sudo kubeadm reset -f || true
 crictl rm --force $(crictl ps -a -q) || true

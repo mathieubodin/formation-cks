@@ -1,4 +1,3 @@
 *
 !.gitignore
-!cks-master_kubeadm__clusterconfiguration.yaml
-!cks-master_kubeadm__initconfiguration.yaml
+!cks-master_kubeadm__configuration.yaml

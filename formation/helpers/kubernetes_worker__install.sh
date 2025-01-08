@@ -1,9 +1,10 @@
 #!/bin/env bash
 
-l_helpers_root=$( dirname -- "${BASH_SOURCE[0]}" | xargs readlink -f)
+
 
 if free | awk '/^Swap:/ {exit !$2}'; then
     sudo swapoff -a
+
     sudo sed -i '/\sswap\s/ s/^\(.*\)$/#\1/g' /etc/fstab
 
     l_swap_service=$(systemctl show -p Id swap.target | cut -d= -f2)
@@ -72,56 +73,28 @@ if ! dpkg -l | grep -q kubeadm; then
     sudo apt install -y kubeadm=1.31.1-1.1
 
     sudo kubeadm config images pull --kubernetes-version=1.31.1
-
-    sudo systemctl daemon-reload
-    sudo systemctl restart kubelet
-
-    sudo kubeadm init --config $l_helpers_root/configurations/cks-master_kubeadm__configuration.yaml \
-        --node-name cks-master
-
-    sudo kubeadm kubeconfig user \
-        --config $l_helpers_root/configurations/cks-master_kubeadm__configuration.yaml \
-        --org system:nodes \
-        --client-name system:node:cks-worker \
-        | tee $l_helpers_root/configurations/cks-worker_kubelet__kubeconfig.yaml
-
-    sudo kubeadm kubeconfig user \
-        --config $l_helpers_root/configurations/cks-master_kubeadm__configuration.yaml \
-        --org system:nodes \
-        --client-name system:node:cks-worker-gvisor \
-        | tee $l_helpers_root/configurations/cks-worker-gvisor_kubelet__kubeconfig.yaml
-
+   
     sudo apt-mark hold kubeadm
-
-    mkdir -p $HOME/.kube
-    sudo cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
-    sudo chown $(id -u):$(id -g) $HOME/.kube/config
 fi
 
-if ! dpkg -l | grep -q kubectl; then
-    bash $l_helpers_root/kubectl__install.sh
+l_helpers_root=$( dirname -- "${BASH_SOURCE[0]}" | xargs readlink -f)
+
+if [ ! -f $l_helpers_root/configurations/cks-worker_kubelet__kubeconfig.yaml ]; then
+    echo "Missing worker configuration file, exiting..."
+    exit 1
 fi
 
-if ! command -v cilium &> /dev/null; then
-    l_cilium_cli_version=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/master/stable.txt)
+sudo mkdir -p /etc/kubernetes
 
-    curl -L https://github.com/cilium/cilium-cli/releases/download/$l_cilium_cli_version/cilium-linux-amd64.tar.gz | sudo tar -xz -C /usr/local/bin cilium
-fi
+sudo cp $l_helpers_root/configurations/cks-worker_kubelet__kubeconfig.yaml /etc/kubernetes/kubelet.conf
 
-if [ $(kubectl -n kube-system get daemonsets.apps -o json | jq -e '.items | map(.metadata.name == "cilium") | any | not') ]; then 
-    l_stable_version=$(cilium version | grep '(stable)' | cut -d' ' -f 4)
-    cilium install --version=$l_stable_version \
-        --set ipam.mode=kubernetes
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
 
-    kubectl -n kube-system wait --for=condition=Ready -l app.kubernetes.io/part-of=cilium pod
-
-    echo 'source <(cilium completion bash)' >> $HOME/.bashrc
-else 
-    echo 'cilium already installed'
-fi
+sudo kubeadm join \
+    --discovery-file /etc/kubernetes/kubelet.conf \
+    --ignore-preflight-errors=FileAvailable--etc-kubernetes-kubelet.conf
 
 echo
 echo
-echo 'kubernetes controlplane installed successfully'
-echo 'add more workers to the cluster'
-echo 'source $HOME/.bashrc to load helm completion'
+echo 'kubernetes worker installed successfully'

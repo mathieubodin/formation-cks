@@ -1,0 +1,19 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "172.16.0.2"
+  bindPort: 6443
+nodeRegistration:
+  name: cks-master
+  ignorePreflightErrors:
+  - NumCPU
+  - Mem
+  imagePullPolicy: IfNotPresent
+---
+apiVersion:	kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+kubernetesVersion: 1.31.1
+networking:
+  serviceSubnet: 10.96.0.0/16
+  podSubnet: 10.244.0.0/16
+controlPlaneEndpoint: "172.16.0.2:6443"
