@@ -76,13 +76,19 @@ VM1: Master `cks-master`
 OS: Ubuntu 20.04 LTS
 DISK: 50GB
 CPU: 2
-RAM: 4GB
+RAM: 2GB
 
 VM2: Worker `cks-worker`
 OS: Ubuntu 20.04 LTS
 DISK: 50GB
 CPU: 2
-RAM: 4GB
+RAM: 2GB
+
+VM3: Worker `cks-worker-gvisor`
+OS: Ubuntu 20.04 LTS
+DISK: 50GB
+CPU: 2
+RAM: 2GB
 
 Virtual machines are created using Vagrant. Check the `Vagrantfile` for more details.
 
