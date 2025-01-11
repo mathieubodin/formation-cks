@@ -269,26 +269,64 @@ The followings are recommended to be defined at the Pod level but can be overrid
 
 Privilege escalation means that a process gains more privileges than its parent process.
 
-Those are obviously security risksand should be avoided as much as possible.
+Those are obviously security risks and should be avoided as much as possible.
 
 #### Hands-on Security Contexts at the Container Level
 
-Let's 
-
-
-Here we want to master where a container can write.
-
-First, create a Pod with the following definition:
+Let's create a Pod with the following definition:
 
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nginx
+  name: pod2
 spec:
   containers:
-  - name: nginx
-    image: nginx
-    securityContext:
-      readOnlyRootFilesystem: true
+  - name: pod2
+    image: busybox
+    command:
+    - sh
+    - -c
+    - sleep 1d
+    securityContext: {}
 ```
+
+Fairly simple, the Pod is running an Nginx container.
+
+Create the Pod (`k apply -f pod2.yaml`) and exec into the container (`k exec -it pod2 -- sh`).
+
+Inside the container, run the following command:
+
+```bash
+# Let's try to write in the root filesystem
+sysctl kernel.hostname=attacker
+```
+
+We get a `sysctl: setting key "kernel.hostname": Read-only file system` error. The root filesystem is mounted as read-only.
+
+Exit the container and update the Pod definition with a `privileged` directive. Update the `securityContext` section with the following:
+
+```yaml
+securityContext:
+  privileged: true
+```
+
+Running again the command `sysctl kernel.hostname=attacker` should succeed, as the container is running in privileged mode.
+
+Exit the container and update the Pod definition with an `allowPrivilegeEscalation` directive. Update the `securityContext` section with the following:
+
+```yaml
+securityContext:
+  privileged: false
+  allowPrivilegeEscalation: false
+```
+
+Run the following command to check the current capabilities:
+
+```bash
+cat /proc/1/status | grep NoNewPrivs
+```
+
+The output should be `NoNewPrivs: 1`. The `NoNewPrivs` flag is set, meaning that the container can't gain more privileges than its parent process.
+
+Exit and delete the Pod.
