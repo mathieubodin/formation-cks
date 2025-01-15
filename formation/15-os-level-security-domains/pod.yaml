@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  volumes:
+    - name: volume
+      persistentVolumeClaim:
+        claimName: pvc
+  containers:
+  - name: container
+    image: busybox
+    command: ["sleep", "3600"]
+    volumeMounts:
+      - name: volume
+        mountPath: /data
