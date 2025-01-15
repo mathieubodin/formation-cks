@@ -576,6 +576,13 @@ Proceed with the upgrade of the cluster.
 11. Uncordon the worker.
 12. Repeat the above steps for the other worker nodes.
 
+### Microservices Vulnerabilities
+
+- Manage Kubernetes Secrets
+- Container Runtime Sandboxes
+- OS Level Security Domains
+- mTLS
+
 #### Manage Kubernetes Secrets
 
 Here we will create a simple pod, two secrets `secret1` - mounted in `pod` as a file - and `secret2` - mounted in `pod` as an environment variable.
@@ -640,3 +647,638 @@ sudo ETCDCTL_API=3 etcdctl \
 ```
 
 It should be encrypted.
+
+#### Container Runtime Sandboxes
+
+- *Container are not VMS* - they are not isolated from the host system. They are isolated from each other, but not from the host system. They share the same kernel as the host system.
+- Since they share the same kernel as the host, an attacker may use this to their advantage to break out of the container and access the host system.
+- To mitigate this, we can use container runtime sandboxes. These helps to reduce the attack surface.
+
+##### Containers and system calls
+
+<!-- markdownlint-disable MD033 -->
+<table style="text-align:center;">
+  <tr>
+    <td style="border-right:1px solid">Container #1</td>
+    <td>Container #2</td>
+    <td style="border-left:1px dashed" rowspan="3">User space</td>
+  </tr>
+  <tr>
+    <td style="border-right:1px solid">App #1 process</td>
+    <td>App #2 process</td>
+  </tr>
+  <tr>
+    <td style="border-right:1px solid">SANDBOX</td>
+    <td>SANDBOX</td>
+  </tr>
+  <tr>
+    <td style="border-right:1px solid">System calls</td>
+    <td>System calls</td>
+    <td style="border-left:1px dashed" rowspan="2">Kernel space</td>
+  </tr>
+  <tr>
+    <td colspan="2">Kernel</td>
+  </tr>
+  <tr >
+    <td colspan="2">Hardware</td>
+    <td style="border:none">&nbsp;</td>
+  </tr>
+</table>
+<!-- markdownlint-enable MD034 -->
+
+###### Hands on: Contact the linux kernel from a container
+
+Run a simple container, then exec into it:
+
+```bash
+k run pod --image=alpine
+k exec -it pod -- uname -r
+```
+
+It should return the kernel version of the host system.
+
+##### OCI: Open Container Initiative
+
+- Linux Foundation project to design open standards for virtualization.
+- It defines a specification for container runtime, image format and distribution.
+- It also supply a reference implementation called `runc`.
+- `kubelet` may use any OCI compliant runtime, only one can be used at a time. It is defined in the `kubelet` configuration file, through the `--container-runtime` and `--container-runtime-endpoint` flags.
+
+##### kata containers
+
+- It is based on kightweight VMs with individual kernels.
+- It provide a strong separation layer
+- Runs every container in its own private VM.
+- By default, it uses `QEMU` to run the VMs.
+
+##### gVisor
+
+- It is a user-space kernel, that intercepts system calls and manages them.
+- Another layer of isolation between the container and the host system.
+- It is **NOT** based on VMs.
+- It simulates kernel syscalls with limited functionality, it is written in Go.
+- It runs in userspace separated from the host kernel.
+- The runtime is called `runsc`.
+
+##### Hands on: RuntimeClass
+
+Create and use a `RuntimeClass` to use `gVisor` as the runtime for a pod.
+
+#### OS Level Security Domains
+
+- Security Contexts
+
+##### Security Contexts
+
+- Define privilege and access control for a Pod or Container.
+  - userID and groupID
+  - Run privileged or unprivileged
+  - Linux capabilities
+  - etc...
+- Security Contexts can be defined at the Pod or Container level. At the Pod level, the security context applies to all Containers in the Pod. At the Container level, the security context is specific to the Container.
+
+###### Security Contexts at the Pod Level
+
+The followings are rules of thumb for defining security contexts at the Pod level.
+
+It must define at least the following:
+
+- `runAsNonRoot`: Run the Pod as a non-root user. Kubelet will not run the Pod as root.
+- `runAsUser`: The UID to run the entrypoint of the container process.
+- `fsGroup`: The GID to run the entrypoint of the container process.
+- `runAsGroup`: The GID to run the entrypoint of the container process.
+
+It should define the following:
+
+- `appArmorProfile`: The AppArmor profile to apply to the container.
+- `seccompProfile`: The seccomp profile to apply to the container.
+
+####### Hands-on Security Contexts at the Pod Level
+
+Here we want to force a container to run as a non-root user.
+
+Create a Pod with the following definition:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: container
+    image: busybox
+    command: ["sleep", "3600"]
+```
+
+Create the Pod:
+
+```bash
+k apply -f pod.yaml
+```
+
+It should be created, but failed to start. Check the status of the Pod:
+
+```bash
+k describe pod pod
+```
+
+In the events, `kubelet` should complain about "Error: container has runAsNonRoot and image will run as root".
+
+Lets fix the issue by changing the user to run the container as. Update the Pod definition with a `runAsUser` directive. Update the `securityContext` section with the following:
+
+```yaml
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+```
+
+Update the Pod:
+
+```bash
+k delete pod pod --force --grace-period=0 && k apply -f pod.yaml
+```
+
+The Pod should be created and running. Check the `id` command in the container:
+
+```bash
+k exec pod -- id
+```
+
+The output should be `uid=1000 gid=0(root) groups=0(root)`. The container is running as the user with UID 1000, but the group is still root.
+
+Let's fix the group issue. Update the Pod definition with a `runAsGroup` directive. Update the `securityContext` section with the following:
+
+```yaml
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+```
+
+Update the Pod:
+
+```bash
+k delete pod pod --force --grace-period=0 && k apply -f pod.yaml
+```
+
+The Pod should be created and running. Check the `id` command in the container:
+
+```bash
+k exec pod -- id
+```
+
+The output should be `uid=1000 gid=3000 groups=3000`. The container is running as the user with UID 1000 and GID 3000. The groups is also changed.
+
+####### Extra: work with `fsGroup`
+
+The `fsGroup` directive is used to define the GID to run the entrypoint of the container process. It is used to define the group that owns the volume mounted by the container.
+
+Let's prepare a volume to mount in the container. To  do so, `ssh` into the `cks-worker` node and create a directory:
+
+```bash
+mkdir -p /tmp/podvolume
+chown 0:2000 /tmp/podvolume
+chmod 770 /tmp/podvolume
+```
+
+Fron now on, this directory is usable by root and the group with GID 2000. Continue by creating a volume using this directory:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv
+spec:
+  capacity:
+    storage: 100Mi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-storage
+  local:
+    path: /tmp/podvolume
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - cks-worker
+```
+
+Create the PersistentVolume:
+
+```bash
+k apply -f pv.yaml
+```
+
+Create a PersistentVolumeClaim:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+  storageClassName: local-storage
+```
+
+Create the PersistentVolumeClaim:
+
+```bash
+k apply -f pvc.yaml
+```
+
+Update the Pod definition to use the PersistentVolumeClaim:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 3000
+  volumes:
+    - name: volume
+      persistentVolumeClaim:
+        claimName: pvc
+  containers:
+  - name: container
+    image: busybox
+    command: ["sleep", "3600"]
+    volumeMounts:
+      - name: volume
+        mountPath: /data
+```
+
+Recreate the Pod:
+
+```bash
+k delete pod pod --force --grace-period=0 && k apply -f pod.yaml
+```
+
+Let's try to write a file in the volume mounted by the container:
+
+```bash
+k exec pod -- touch /data/file
+```
+
+The command should fail with a permission denied error. This is because the container is running as the user with UID 1000 and GID 3000, but the group owning the volume is 2000. To fix the issue, we need to update the Pod definition with a `fsGroup` directive. Update the `securityContext` section with the following:
+
+```yaml
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 3000
+  fsGroup: 2000
+```
+
+Update the Pod:
+
+```bash
+k delete pod pod --force --grace-period=0 && k apply -f pod.yaml
+```
+
+Let's try to write a file in the volume mounted by the container:
+
+```bash
+k exec pod -- touch /data/file
+```
+
+The command should succeed. The container is running as the user with UID 1000 and GID 3000, and the group owning the volume is 2000. The `fsGroup` directive allows the container to write in the volume.
+
+Verify the file is created:
+
+```bash
+k exec pod -- ls -l /data
+```
+
+It should contain the `file` file. Good job, the container can write in the volume.
+
+###### Security Contexts at the Container Level
+
+The followings are rules of thumb for defining security contexts at the Container level. It is recommended to define security contexts at the Pod level when possible and only define them at the Container level when necessary.
+
+Remember that the security context at the Container level overrides the security context at the Pod level.
+
+It must define at least the following:
+
+- `privileged`: Run the Container in privileged mode. It should be avoided as much as possible.
+- `allowPrivilegeEscalation`: Do not allow privilege escalation. It should be avoided as much as possible.
+- `readOnlyRootFilesystem`: Mount the root filesystem as read-only. Writing to the root filesystem should be avoided and authorized only when necessary.
+- `capabilities`: Drop all capabilities and add only the necessary ones.
+
+The followings are recommended to be defined at the Pod level but can be overridden at the Container level:
+
+- `runAsNonRoot`: Run the Container as a non-root user. It should be avoided as much as possible.
+- `runAsUser`: The UID to run the entrypoint of the container process.
+- `runAsGroup`: The GID to run the entrypoint of the container process.
+- `fsGroup`: The GID to run the entrypoint of the container process.
+- `appArmorProfile`: The AppArmor profile to apply to the container.
+- `seccompProfile`: The seccomp profile to apply to the container.
+
+####### Privileged Containers and privilege escalation
+
+`Privileged` means that container user 0 (root) is directly mapped to the host user 0 (root).
+
+Privilege escalation means that a process gains more privileges than its parent process.
+
+Those are obviously security risks and should be avoided as much as possible.
+
+####### Hands-on Security Contexts at the Container Level
+
+Let's create a Pod with the following definition:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod2
+spec:
+  containers:
+  - name: pod2
+    image: busybox
+    command:
+    - sh
+    - -c
+    - sleep 1d
+    securityContext: {}
+```
+
+Fairly simple, the Pod is running an Nginx container.
+
+Create the Pod (`k apply -f pod2.yaml`) and exec into the container (`k exec -it pod2 -- sh`).
+
+Inside the container, run the following command:
+
+```bash
+# Let's try to write in the root filesystem
+sysctl kernel.hostname=attacker
+```
+
+We get a `sysctl: setting key "kernel.hostname": Read-only file system` error. The root filesystem is mounted as read-only.
+
+Exit the container and update the Pod definition with a `privileged` directive. Update the `securityContext` section with the following:
+
+```yaml
+securityContext:
+  privileged: true
+```
+
+Running again the command `sysctl kernel.hostname=attacker` should succeed, as the container is running in privileged mode.
+
+Exit the container and update the Pod definition with an `allowPrivilegeEscalation` directive. Update the `securityContext` section with the following:
+
+```yaml
+securityContext:
+  privileged: false
+  allowPrivilegeEscalation: false
+```
+
+Run the following command to check the current capabilities:
+
+```bash
+cat /proc/1/status | grep NoNewPrivs
+```
+
+The output should be `NoNewPrivs: 1`. The `NoNewPrivs` flag is set, meaning that the container can't gain more privileges than its parent process.
+
+Exit and delete the Pod.
+
+#### mTLS
+
+- mTLS / Pod to Pod communication
+- Service Meshes
+- Scenarios
+- Cilium
+
+##### mTLS - Mutual TLS
+
+- Mutual authentication
+- Two-way (bilateral) authentication
+- Two parties authenticating each other at the same time
+
+###### K8s Pod to Pod communication
+
+- By default, Pods can communicate with each other, thanks to the CNI plugin.
+- No authentication or encryption by default.
+
+Whenever an Ingress controller is ueed, it would stand as a TLS termination point, and the communication between the Ingress controller and the backend Pods would be unencrypted. In such scenarios, an attacker could intercept the communication between the Ingress controller and the backend Pods.
+
+In order to secure the communication between Pods, mTLS can be used.
+
+###### Service Meshes
+
+- A dedicated infrastructure layer for handling service-to-service communication.
+- Service Meshes can handle mTLS, service discovery, load balancing, etc.
+- Examples: Istio, Linkerd, Consul Connect, Cilium, etc.
+- It can be implemented as a sidecar container. The sidecar container would intercept all the traffic between the main container and the network. The sidecar container would handle the mTLS, service discovery, etc.
+
+###### Hands-on Services Meshes
+
+Let's create a simple Pod equiped with a sidecar container.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: app
+  name: app
+spec:
+  containers:
+  - command:
+    - sh
+    - -c
+    - ping google.com
+    image: bash
+    name: app
+  - name: proxy
+    image: ubuntu
+    command:
+    - sh
+    - -c
+    - apt update && apt install -y iptables && iptables -L && sleep 1d
+
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+```
+
+Create the Pod (`k apply -f app.yaml`) and exec into the Pod.
+
+Despite the fact the Pod seems to be running fine, the `proxy` fails to run the `iptables -L` command. This is due to the fact that the `proxy` container is not running as root.
+
+Let's fix this by adding `capabilities` to the `proxy` container.
+
+Update the Pod definition as follows:
+
+```yaml
+# Add this securityContext in the proxy container
+securityContext:
+    capabilities:
+        add:
+        - NET_ADMIN
+```
+
+Apply the changes (`k apply -f app.yaml`) then check the `iptables -L` command in the `proxy` container. It should now work.
+
+####### Extra: Enable mTLS with Cilium
+
+References:
+
+- [Mutual Authentication (Beta)](https://docs.cilium.io/en/latest/network/servicemesh/mutual-authentication/mutual-authentication/#mutual-authentication-beta)
+- [Mutual Authentication Example](https://docs.cilium.io/en/latest/network/servicemesh/mutual-authentication/mutual-authentication-example/#mutual-authentication-example)
+
+In order to enable mTLS with Cilium, the following steps should be followed:
+
+1. Connect to the cluster
+
+    ```bash
+    vagrant ssh vm1
+    ```
+
+2. Uninstall Cilium (if already installed)
+
+    ```bash
+    cilium uninstall
+    ```
+
+3. Install Cilium with mTLS enabled
+
+    ```bash
+    cilium install \
+        --set authentication.mutual.spire.enabled=true \
+        --set authentication.mutual.spire.install.enabled=true \
+        --set authentication.mutual.spire.install.server.dataStorage.enabled=false
+    ```
+
+4. Verify the status of the Cilium agent and operator
+
+    ```bash
+    cilium status
+    ```
+
+Let's move on to a concrete example. Here we would use resources provided by the Cilium project.
+
+Fetch them from the Cilium repository:
+
+```bash
+# Move to 16-mTLS directory
+cd 16-mTLS
+# Download the resources
+curl -Lo extra-enable-mTLS-with-cilium/mutual-auth-example.yaml https://raw.githubusercontent.com/cilium/cilium/HEAD/examples/kubernetes/servicemesh/mutual-auth-example.yaml
+curl -Lo extra-enable-mTLS-with-cilium/cnp-without-mutual-auth.yaml https://raw.githubusercontent.com/cilium/cilium/HEAD/examples/kubernetes/servicemesh/cnp-without-mutual-auth.yaml
+```
+
+Review them, then apply them:
+
+```bash
+k apply -f extra-enable-mTLS-with-cilium/mutual-auth-example.yaml
+k apply -f extra-enable-mTLS-with-cilium/cnp-without-mutual-auth.yaml
+```
+
+Check the scenario is setup correctly:
+
+```bash
+k exec -it pod-worker -- curl -s -o /dev/null -w "%{http_code}" http://echo:8080/headers
+# It should return 200
+k exec -it pod-worker -- curl http://echo:8080/headers-1
+# It should return Access Denied
+```
+
+As you may have noticed mTLS communication in this scenario is implemented through a SPIRE server.
+
+Let's check the SPIRE server health:
+
+```bash
+k get all -n cilium-spire
+# It should list all SPIRE related resources in a Ready/Running state
+```
+
+Run a health check on the SPIRE server:
+
+```bash
+k exec -n cilium-spire spire-server-0 -c spire-server -- /opt/spire/bin/spire-server healthcheck
+# It should return Server is healthy
+```
+
+Have a look at the list of attested agents:
+
+```bash
+k exec -n cilium-spire spire-server-0 -c spire-server -- /opt/spire/bin/spire-server agent list
+# It should list two agents
+```
+
+Let's verify SPIFFE IDs:
+
+```bash
+k exec -n cilium-spire spire-server-0 -c spire-server \
+    -- /opt/spire/bin/spire-server entry show \
+        -parentID spiffe://spiffe.cilium/ns/cilium-spire/sa/spire-agent
+# It should list the SPIFFE ID of the cilium-agent
+```
+
+Fetch the Cilium Identity of the echo Pod:
+
+```bash
+IDENTITY_ID=$(k get cep -l app=echo -o=jsonpath='{.items[0].status.identity.id}')
+echo $IDENTITY_ID
+# It should return a number
+```
+
+Register the echo Pod with the SPIRE server:
+
+```bash
+k exec -n cilium-spire spire-server-0 -c spire-server \
+    -- /opt/spire/bin/spire-server entry show \
+        -spiffeID spiffe://spiffe.cilium/identity/$IDENTITY_ID
+# It should return the entry in the SPIRE server
+```
+
+Now fetch the updated version of the CiliumNetworkPolicy:
+
+```bash
+curl -Lo extra-enable-mTLS-with-cilium/cnp-with-mutual-auth.yaml https://raw.githubusercontent.com/cilium/cilium/HEAD/examples/kubernetes/servicemesh/cnp-with-mutual-auth.yaml
+```
+
+Remove the old CiliumNetworkPolicy and apply the new one:
+
+```bash
+k delete -f extra-enable-mTLS-with-cilium/cnp-without-mutual-auth.yaml
+k apply -f extra-enable-mTLS-with-cilium/cnp-with-mutual-auth.yaml
+```
+
+Check the scenario is still working correctly:
+
+```bash
+k exec -it pod-worker -- curl -s -o /dev/null -w "%{http_code}" http://echo:8080/headers
+# It should return 200
+k exec -it pod-worker -- curl http://echo:8080/headers-1
+# It should return Access Denied
+```
+
+Enable debug level logging for the Cilium agent:
+
+```bash
+cilium config set debug true
+```
+
+Check the logs of the Cilium agent located on the same worker node as the echo Pod:
+
+```bash
+k -n kube-system -c cilium-agent logs cilium-9pshw --timestamps=true | grep "Policy is requiring authentication\|Validating Server SNI\|Validated certificate\|Successfully authenticated"
+```
+
+Note that `cilium-9pshw` is the name of the Cilium agent Pod.
