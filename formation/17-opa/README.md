@@ -195,6 +195,7 @@ First, install OPA Gatekeeper. We use
 
 ```bash
 curl -Lo install/gatekeeper.yaml  https://raw.githubusercontent.com/killer-sh/cks-course-environment/master/course-content/opa/gatekeeper.yaml
+k apply -f install/gatekeeper.yaml
 ```
 
 Let's create `DenyAll` policy:
@@ -204,5 +205,145 @@ Let's create `DenyAll` policy:
 curl -Lo deny-all/alwaysdeny_template.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deny-all/alwaysdeny_template.yaml
 # Fetch the constraint
 curl -Lo deny-all/all_pod_always_deny.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deny-all/all_pod_always_deny.yaml
+k apply -f deny-all/alwaysdeny_template.yaml
+k apply -f deny-all/all_pod_always_deny.yaml
 ```
 
+Now, create a Pod:
+
+```bash
+k apply -f pod.yaml
+```
+
+The Pod should be rejected.
+
+Now we want to enforce certain label on namespaces.
+
+```bash
+# Fetch the template
+curl -Lo namespace-labels/k8srequiredlabels_template.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/namespace-labels/k8srequiredlabels_template.yaml
+# Fetch the constraints
+curl -Lo namespace-labels/all_ns_must_have_cks.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/namespace-labels/all_ns_must_have_cks.yaml
+curl -Lo namespace-labels/all_pod_must_have_cks.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/namespace-labels/all_pod_must_have_cks.yaml
+```
+
+Let's create the Gatekeeper policy:
+
+```bash
+# Create the Gatekeeper policy template
+k apply -f namespace-labels/k8srequiredlabels_template.yaml
+# Create the Gatekeeper policy constraint
+k apply -f namespace-labels/all_ns_must_have_cks.yaml
+```
+
+Check the CRDs:
+
+```bash
+k get crd
+```
+
+It should list the `k8srequiredlabels.constraints.gatekeeper.sh` CRD.
+
+Now list those resources:
+
+```bash
+k get k8srequiredlabels
+```
+
+It should list the `ns-must-have-cks` constraint.
+
+List thr current violations of the constraint by describing the constraint:
+
+```bash
+k describe k8srequiredlabels ns-must-have-cks
+```
+
+It should list the violations. Among them, the `default` namespace should be listed.
+
+Let's fix the violation by adding the required label to the `default` namespace:
+
+```bash
+k label ns default cks=false
+```
+
+After a few seconds, the violation should disappear.
+
+Now, let's create a new namespace:
+
+```bash
+k create ns test
+```
+
+The namespace should be rejected.
+
+Update the constraint to enforce the presence of two labels instead of one:
+
+```yaml
+# Update in the file `namespace-labels/all_ns_must_have_cks.yaml`
+# ...
+  labels: ["cks", "team"]
+```
+
+Apply the updated constraint:
+
+```bash
+k apply -f namespace-labels/all_ns_must_have_cks.yaml
+```
+
+Try again to create the `test` namespace. It should be rejected, with a message indicating that the `team` label is also missing.
+
+Create a new manifest for this namespace:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+  labels:
+    cks: "true"
+    team: "dev"
+```
+
+Use this manifest to create the namespace, it should be accepted.
+
+Cleanup the resources:
+
+```bash
+k delete -f namespace-labels/all_ns_must_have_cks.yaml
+k delete -f namespace-labels/k8srequiredlabels_template.yaml
+k delete ns test
+```
+
+Let's move on to deploy constraints on deployments. First, fetch the resources:
+
+```bash
+# Fetch the template
+curl -Lo deployment-replica-count/k8sminreplicacount_template.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deployment-replica-count/k8sminreplicacount_template.yaml
+# Fetch the constraints
+curl -Lo deployment-replica-count/all_deployment_must_have_min_replicacount.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deployment-replica-count/all_deployment_must_have_min_replicacount.yaml
+```
+
+Create the Gatekeeper policy:
+
+```bash
+# Create the Gatekeeper policy template
+k apply -f deployment-replica-count/k8sminreplicacount_template.yaml
+# Create the Gatekeeper policy constraint
+k apply -f deployment-replica-count/all_deployment_must_have_min_replicacount.yaml
+```
+
+Let's create a deployment without enough replicas:
+
+```bash
+k create deployment nginx --image=nginx --replicas=1
+```
+
+It should be rejected.
+
+Now, let's create a deployment with enough replicas:
+
+```bash
+k create deployment nginx --image=nginx --replicas=2
+```
+
+It should be accepted.
