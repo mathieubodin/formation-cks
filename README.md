@@ -1282,3 +1282,206 @@ k -n kube-system -c cilium-agent logs cilium-9pshw --timestamps=true | grep "Pol
 ```
 
 Note that `cilium-9pshw` is the name of the Cilium agent Pod.
+
+## Image Footprint
+
+- Containers and Docker
+- Reduce Image Size (Multi-Stage)
+- Secure Images
+
+### Containers and Docker
+
+- Containers are a way to package software in a format that can run isolated on a shared operating system.
+- Containers are lightweight because they don't need the extra load of a hypervisor, but run directly within the host machine's kernel.
+- Containers are separated from each other and from the host machine to guarantee that they are isolated from each other, through the use of *kernel groups*.
+- Containers are built from images that specify their precise contents. Images are built from layers that are stacked on top of each other. Each layer depends on the layer below it.
+- Docker is a tool that automates the deployment of applications inside software containers. It uses a Dockerfile to describe how the layers are stacked.
+- Dockerfiles are text files that contain the commands used to describe the layers in the image. Some of them would create layers, while others would create temporary images that would not increase the size of the final image.
+
+### Reduce Image Size (Multi-Stage)
+
+The idea behind multi-stage builds is to use multiple `FROM` statements in a single `Dockerfile`. Each `FROM` statement starts a new stage, and the final image is built from the last stage. The intermediate stages are not included in the final image, which reduces the size of the final image.
+
+Thus, multi-stage builds are a way to reduce the size of the final image by using intermediate images that are not included in the final image. This is useful when you need to build an image that requires a lot of dependencies, but you don't want to include those dependencies in the final image.
+
+#### Hands-on multi-stage build
+
+First, we'll work with a simple example.
+
+```shell
+# Connect to the Vagrant VM
+vagrant ssh vm1
+# Move to the directory
+cd 18-image-footprint/docker
+# Build the image
+sudo docker build -t app .
+# Run the container
+sudo docker run app
+```
+
+Check the image size with `sudo docker images`. It's pretty heavy. Let's try to reduce it with a multi-stage build.
+
+Update the `Dockerfile` and add another `FROM` section:
+
+```dockerfile
+# ...
+RUN CGO_ENABLED=0 go build app.go
+
+FROM alpine
+COPY --from=0 /app .
+
+CMD ["./app"]
+```
+
+Now, build the image again:
+
+```shell
+sudo docker build -t app .
+```
+
+Check the image size again. It should be much smaller.
+
+### Secure Images
+
+- Keep images up to date: Regularly update the base image and dependencies.
+- Use official images: Use official images from trusted sources. They are more likely to be secure and up to date.
+- Use tagged images: Use tagged images to ensure that you are using a specific version of the image.
+- Scan images: Use tools like Clair, Trivy, or Anchore to scan images for vulnerabilities.
+- Use versioned packages: Use versioned packages to ensure that you are using a specific version of the package.
+- Use minimal images: Use minimal images to reduce the attack surface.
+
+#### Extra: analyse image with Trivy
+
+Resources:
+
+- [Installing Trivy](https://trivy.dev/latest/getting-started/installation/#debianubuntu-official)
+
+##### Install Trivy
+
+```shell
+# Connect to the Vagrant VM
+vagrant ssh vm1
+# Install Trivy
+sudo apt-get install wget gnupg
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+sudo apt-get update
+sudo apt-get install trivy
+```
+
+Run Trivy to scan the image:
+
+```shell
+sudo trivy image app --ignore-unfixed --severity HIGH,CRITICAL --format json --output extra-trivy/app_docker-image__trivy.json
+```
+
+## Static Analysis of User Workloads
+
+- What is static analysis?
+- Manual approach
+- Tools for Kubernetes and scenarios
+
+### What is static analysis?
+
+- Looks at source code and text files
+- Check against rules
+- Enforce rules
+
+#### Static analysis rules
+
+Examples:
+
+- Always define resource requests and limits
+- Pods shoud never use the default ServiceAccount
+
+Rules depends on use case and company or project. Never store sensitive data plain in K8s/Docker files.
+
+#### Static Analysis in CI/CD
+
+The overall process would look like this:
+
+1. Developer writes code
+2. Code is committed then pushed to a repository
+3. CI/CD pipeline is triggered to build the code, test it, and deploy it
+
+Static analysis can be done in various stages of this process.
+
+#### Manual approach
+
+- Review code
+- Check for common mistakes
+
+#### Tools for Kubernetes and scenarios
+
+##### [Kubesec](https://kubesec.io/)
+
+Kubesec is a tool that can be used to perform security risk analysis on Kubernetes resources. It is opensource and opinianated. It checks a fixed set of rules (Security Best Practices). It run as:
+
+- Binary
+- Docker container
+- Kubectl plugin
+- Admission controller (kubesec-webhook)
+
+Practical example:
+
+```bash
+# Connect to VM1
+vagrant ssh vm1
+# Move to the directory
+cd 19-static-analysis/kubesec
+# Create a pod manifest
+k run nginx --image=nginx --dry-run=client -o yaml > pod.yaml
+# Run kubesec through Docker
+sudo docker run -i kubesec/kubesec:512c5e0 scan /dev/stdin < pod.yaml
+```
+
+Review the advices and fix the issues.
+
+##### [Conftest - OPA](https://www.openpolicyagent.org/docs/latest/#conftest)
+
+It is a Unit test framework for Kubernetes configurations. As for OPA, it uses Rego language.
+
+Sources:
+
+- [Conftest](https://www.conftest.dev/)
+- [OPA](https://www.openpolicyagent.org/)
+- [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/)
+
+Practical example:
+
+```bash
+# Connect to VM1
+vagrant ssh vm1
+# Move to the directory
+cd 19-static-analysis/conftest/kubernetes
+# Fetch the course resources from the repository
+curl -Lo deploy.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/supply-chain-security/static-analysis/conftest/kubernetes/deploy.yaml
+mkdir policy
+curl -Lo policy/deployment.rego https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/supply-chain-security/static-analysis/conftest/kubernetes/policy/deployment.rego
+echo 'sudo docker run --rm -v $(pwd):/project openpolicyagent/conftest test deploy.yaml' > run.sh
+chmod +x run.sh
+# Run the test
+./run.sh
+```
+
+Review the advices and fix the issues.
+
+Let's practice on a Dockerfile:
+
+```bash
+# Connect to VM1
+vagrant ssh vm1
+# Move to the directory
+cd 19-static-analysis/conftest/docker
+# Fetch the course resources from the repository
+curl -Lo Dockerfile https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/supply-chain-security/static-analysis/conftest/docker/Dockerfile
+mkdir policy
+curl -Lo policy/base.rego https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/supply-chain-security/static-analysis/conftest/docker/policy/base.rego
+curl -Lo policy/commands.rego https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/supply-chain-security/static-analysis/conftest/docker/policy/commands.rego
+echo 'sudo docker run --rm -v $(pwd):/project openpolicyagent/conftest test Dockerfile -' > run.sh
+chmod +x run.sh
+# Run the test
+./run.sh
+```
+
+Review the advices and fix the issues.
