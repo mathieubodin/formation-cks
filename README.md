@@ -13,13 +13,13 @@
 
 For hands-on practice, I need a two nodes cluster setup with `kubeadm`.
 
-### Security best practices
+## Security best practices
 
 - Security Principles
 - K8s Security Categories
 - K8s Best Practices
 
-#### Security Principles
+### Security Principles
 
 - Defense in depth
   - Multiple layers of security
@@ -29,13 +29,13 @@ For hands-on practice, I need a two nodes cluster setup with `kubeadm`.
 - Limiting the attack surface
   - Reduce the number of entry points
 
-#### K8s Security Categories
+### K8s Security Categories
 
 - Host Operating System Security
 - Kubenrtetes Cluster Security
 - Application Security
 
-##### Host OS Security
+#### Host OS Security
 
 - Kubernetes Nodes should only do one thing: Kubernetes
 - Reduce Attack Surface
@@ -45,7 +45,7 @@ For hands-on practice, I need a two nodes cluster setup with `kubeadm`.
 - Find and identify malicious processes
 - Restrict IAM /SSH access
 
-##### Kubernetes Cluster Security
+#### Kubernetes Cluster Security
 
 - Kubernetes componenets are running secure and up)to-date
   - API Server
@@ -60,7 +60,7 @@ For hands-on practice, I need a two nodes cluster setup with `kubeadm`.
 - Secutiry Benchmarking
   - CIS
 
-##### Application Security
+#### Application Security
 
 - Use Secrets / no hardcoded credentials
 - RBAC
@@ -72,7 +72,7 @@ For hands-on practice, I need a two nodes cluster setup with `kubeadm`.
 - Vulnerability Scanning
 - mTLS / ServiceMeshes
 
-### Cluster Setup
+## Cluster Setup
 
 VM1: Master `cks-master`
 OS: Ubuntu 20.04 LTS
@@ -124,13 +124,13 @@ vagrant ssh vm2
 bash 01-cluster-setup/install_worker.sh
 ```
 
-#### Network Security Policy
+## Network Security Policy
 
 - NetworkPolicies
 - Default Deny
 - Scenarios
 
-##### Hands-on GUI elements
+### Hands-on GUI elements
 
 Install `helm`:
 
@@ -150,15 +150,15 @@ helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
 helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
 ```
 
-###### Extra: *install `helm-controller`*
+#### Extra: *install `helm-controller`*
 
 ```shell
 helm install helm-controller oci://registry.gitlab.com/xrow-public/helm-controller/charts/helm-controller --version 0.0.5 --namespace kube-system
 ```
 
-#### Secure Ingress
+## Secure Ingress
 
-##### Hands-on Secure Ingress
+### Hands-on Secure Ingress
 
 Install nginx ingress controller:
 
@@ -214,19 +214,19 @@ To create a secret with the certificate and key, run the following command:
 k create secret tls secure-ingress --cert=$HOME/cks/pki/certs/local-ingress.cert.pem --key=$HOME/cks/pki/private/local-ingress.key.pem
 ```
 
-#### Node Metadata protection
+## Node Metadata protection
 
 - Metadata API available on virtual machines spun up in cloud providers
 - Metadata API can be used to get sensitive information
 - Pods on worker nodes can access the metadata API
 - Metadata API access should be restricted to pods that need it, through Network Policies for example.
 
-#### Use CIS Benchmarks to review security configurations
+## Use CIS Benchmarks to review security configurations
 
 - CIS Benchmarks are a set of best practices for securing a system
 - CIS Benchmarks are available for Kubernetes
 
-##### Hands-on CIS Benchmarks in action
+### Hands-on CIS Benchmarks in action
 
 We'll use `kube-bench` to check the cluster against the CIS benchmarks. It will be run on the master node from within a container.
 
@@ -236,12 +236,12 @@ sudo docker run --pid=host -v /etc:/etc:ro -v /var:/var:ro -t docker.io/aquasec/
 
 This can be done also on the worker node.
 
-#### Verify platform binaries
+## Verify platform binaries
 
 - Verify the checksum of the binaries with hashes, which is a *finger print*.
 - The process is quite simple: download the binary, download the hash, and compare the latter with the one you would compute for the binary.
 
-##### Hands-on Verify platform binaries
+### Hands-on Verify platform binaries
 
 First, download the data from the official Kubernetes website:
 
@@ -291,14 +291,14 @@ cat checksum | uniq | wc -l | grep -q 1 && echo "Checksums match" || echo "Check
 rm -rf checksum kubernetes-server-linux-amd64.tar.gz kubernetes
 ```
 
-### Cluster Hardening
+## Cluster Hardening
 
 - RBAC
 - ServiceAccounts
 - Restrict API access
 - Upgrade Kubernetes
 
-#### RBAC
+### RBAC
 
 - Role Based Access Control
 - Define roles and bind them to users
@@ -354,7 +354,7 @@ Reminder:
 2. When a ClusterRole is granted to an identity through a ClusterRoleBinding, the permissions are granted **across all namespaces, now and in the future**.
 3. A Role **can't** be granted to an identity at a cluster level (with ClusterRoleBinding).
 
-##### Hands-on RBAC
+#### Hands-on RBAC
 
 Let's work with Roles and RoleBindings in the `08-rbac` directory.
 
@@ -391,7 +391,7 @@ k -n blue auth can-i delete deployments --as=jane
 k auth can-i delete deployments --as=jane -A
 ```
 
-#### Accounts
+### Accounts
 
 - ServiceAccounts
 - *normal* accounts
@@ -407,7 +407,7 @@ Reminder:
     - Username cannot be used until the certificate expires
     - Create new CA and re-issue all certificates
 
-##### Hands-on Accounts
+#### Hands-on Accounts
 
 Let's create a certificate+key and authenticate as user jane
 
@@ -455,7 +455,7 @@ k config set-context jim --user=jim --cluster=kubernetes --namespace=default
 k config view
 ```
 
-#### Service Accounts
+### Service Accounts
 
 - Service Accounts are used by pods to authenticate to the API server
 - Service Accounts are namespaced, there is a `default` Service Account in each namespace
@@ -472,7 +472,7 @@ Reminder:
 3. **Control permissions granted to each Service Account.**
     - embrace the principle of least privilege.
 
-##### Hands-on Service Accounts
+#### Hands-on Service Accounts
 
 Let's create a service account and a pod that uses it.
 
@@ -489,7 +489,7 @@ It can be done in a pod spec with the `automountServiceAccountToken` field. It w
 
 Or it can be done in a service account with the `automountServiceAccountToken` field. It would mean that all pods using this service account do not need to interact with the API server.
 
-#### Restrict API access
+### Restrict API access
 
 - Authentication, Authorization, Admission Control
 - Connect to the API server
@@ -505,7 +505,7 @@ Restrictions:
 6. Prevent pods from accessing API
 7. Apiserver port behind firewall / allowed ip ranges
 
-##### Hands-on Restrict API access
+#### Hands-on Restrict API access
 
 ```shell
 vagrant ssh vm1
@@ -521,11 +521,11 @@ export SERVER_URL=$(k config view -o=json --raw=true | jq -r '.clusters[0].clust
 curl $SERVER_URL --cacert ca.cert --cert client.cert --key client.key
 ```
 
-#### Upgrade Kubernetes
+### Upgrade Kubernetes
 
 Here, we focus on upgrading a Kubernetes cluster, created using the `kubeadm` tool.
 
-##### Prerequisites
+#### Prerequisites
 
 We need a Kubernetes cluster created using `kubeadm`. We will reuse the same process to create the virtual virtual machines: Setup two virtual machines using Vagrant, process with customized scripts to install Kubernetes on each nodes.
 
@@ -561,7 +561,7 @@ bash install_worker.sh
 
 Proceed with the upgrade of the cluster.
 
-##### Steps
+#### Steps
 
 1. Drain the cluster controlplane node. Ignore daemonsets.
 2. Upgrade the `kubeadm` tool on the controlplane nodes.
@@ -576,25 +576,25 @@ Proceed with the upgrade of the cluster.
 11. Uncordon the worker.
 12. Repeat the above steps for the other worker nodes.
 
-### Microservices Vulnerabilities
+## Microservices Vulnerabilities
 
 - Manage Kubernetes Secrets
 - Container Runtime Sandboxes
 - OS Level Security Domains
 - mTLS
 
-#### Manage Kubernetes Secrets
+### Manage Kubernetes Secrets
 
 Here we will create a simple pod, two secrets `secret1` - mounted in `pod` as a file - and `secret2` - mounted in `pod` as an environment variable.
 
-##### Create the secrets
+#### Create the secrets
 
 ```shell
 k create secret generic secret1 --from-literal=authentication=secretpassword
 k create secret generic secret2 --from-literal=login=secretlogin
 ```
 
-##### Create the pod
+#### Create the pod
 
 ```shell
 k run pod --image=nginx --dry-run=client -o yaml > pod.yaml
@@ -602,7 +602,7 @@ k run pod --image=nginx --dry-run=client -o yaml > pod.yaml
 
 Edit the `pod.yaml` file and add the secrets support.
 
-##### Check secrets in `ectd`
+#### Check secrets in `ectd`
 
 ```shell
 sudo ETCDCTL_API=3 etcdctl \
@@ -622,7 +622,7 @@ sudo ETCDCTL_API=3 etcdctl \
    get /registry/secrets/default/secret2 | hexdump -C | tee secret2__not-crypted.hexdump
 ```
 
-##### Encrypt the secrets in `etcd`
+#### Encrypt the secrets in `etcd`
 
 Prepare a file `encryption-provider-config.yaml`, move it to `/etc/kubernetes/etcd/` on the controlplane. Ensure the `identity` provider is enabled, only for read.
 
@@ -648,13 +648,13 @@ sudo ETCDCTL_API=3 etcdctl \
 
 It should be encrypted.
 
-#### Container Runtime Sandboxes
+### Container Runtime Sandboxes
 
 - *Container are not VMS* - they are not isolated from the host system. They are isolated from each other, but not from the host system. They share the same kernel as the host system.
 - Since they share the same kernel as the host, an attacker may use this to their advantage to break out of the container and access the host system.
 - To mitigate this, we can use container runtime sandboxes. These helps to reduce the attack surface.
 
-##### Containers and system calls
+#### Containers and system calls
 
 <!-- markdownlint-disable MD033 -->
 <table style="text-align:center;">
@@ -686,7 +686,7 @@ It should be encrypted.
 </table>
 <!-- markdownlint-enable MD034 -->
 
-###### Hands on: Contact the linux kernel from a container
+##### Hands on: Contact the linux kernel from a container
 
 Run a simple container, then exec into it:
 
@@ -697,21 +697,21 @@ k exec -it pod -- uname -r
 
 It should return the kernel version of the host system.
 
-##### OCI: Open Container Initiative
+#### OCI: Open Container Initiative
 
 - Linux Foundation project to design open standards for virtualization.
 - It defines a specification for container runtime, image format and distribution.
 - It also supply a reference implementation called `runc`.
 - `kubelet` may use any OCI compliant runtime, only one can be used at a time. It is defined in the `kubelet` configuration file, through the `--container-runtime` and `--container-runtime-endpoint` flags.
 
-##### kata containers
+#### kata containers
 
 - It is based on kightweight VMs with individual kernels.
 - It provide a strong separation layer
 - Runs every container in its own private VM.
 - By default, it uses `QEMU` to run the VMs.
 
-##### gVisor
+#### gVisor
 
 - It is a user-space kernel, that intercepts system calls and manages them.
 - Another layer of isolation between the container and the host system.
@@ -720,15 +720,15 @@ It should return the kernel version of the host system.
 - It runs in userspace separated from the host kernel.
 - The runtime is called `runsc`.
 
-##### Hands on: RuntimeClass
+#### Hands on: RuntimeClass
 
 Create and use a `RuntimeClass` to use `gVisor` as the runtime for a pod.
 
-#### OS Level Security Domains
+### OS Level Security Domains
 
 - Security Contexts
 
-##### Security Contexts
+#### Security Contexts
 
 - Define privilege and access control for a Pod or Container.
   - userID and groupID
@@ -737,7 +737,7 @@ Create and use a `RuntimeClass` to use `gVisor` as the runtime for a pod.
   - etc...
 - Security Contexts can be defined at the Pod or Container level. At the Pod level, the security context applies to all Containers in the Pod. At the Container level, the security context is specific to the Container.
 
-###### Security Contexts at the Pod Level
+##### Security Contexts at the Pod Level
 
 The followings are rules of thumb for defining security contexts at the Pod level.
 
@@ -832,7 +832,7 @@ k exec pod -- id
 
 The output should be `uid=1000 gid=3000 groups=3000`. The container is running as the user with UID 1000 and GID 3000. The groups is also changed.
 
-####### Extra: work with `fsGroup`
+###### Extra: work with `fsGroup`
 
 The `fsGroup` directive is used to define the GID to run the entrypoint of the container process. It is used to define the group that owns the volume mounted by the container.
 
@@ -967,7 +967,7 @@ k exec pod -- ls -l /data
 
 It should contain the `file` file. Good job, the container can write in the volume.
 
-###### Security Contexts at the Container Level
+##### Security Contexts at the Container Level
 
 The followings are rules of thumb for defining security contexts at the Container level. It is recommended to define security contexts at the Pod level when possible and only define them at the Container level when necessary.
 
@@ -1057,20 +1057,20 @@ The output should be `NoNewPrivs: 1`. The `NoNewPrivs` flag is set, meaning that
 
 Exit and delete the Pod.
 
-#### mTLS
+### mTLS
 
 - mTLS / Pod to Pod communication
 - Service Meshes
 - Scenarios
 - Cilium
 
-##### mTLS - Mutual TLS
+#### mTLS - Mutual TLS
 
 - Mutual authentication
 - Two-way (bilateral) authentication
 - Two parties authenticating each other at the same time
 
-###### K8s Pod to Pod communication
+##### K8s Pod to Pod communication
 
 - By default, Pods can communicate with each other, thanks to the CNI plugin.
 - No authentication or encryption by default.
@@ -1079,14 +1079,14 @@ Whenever an Ingress controller is ueed, it would stand as a TLS termination poin
 
 In order to secure the communication between Pods, mTLS can be used.
 
-###### Service Meshes
+##### Service Meshes
 
 - A dedicated infrastructure layer for handling service-to-service communication.
 - Service Meshes can handle mTLS, service discovery, load balancing, etc.
 - Examples: Istio, Linkerd, Consul Connect, Cilium, etc.
 - It can be implemented as a sidecar container. The sidecar container would intercept all the traffic between the main container and the network. The sidecar container would handle the mTLS, service discovery, etc.
 
-###### Hands-on Services Meshes
+##### Hands-on Services Meshes
 
 Let's create a simple Pod equiped with a sidecar container.
 
@@ -1282,6 +1282,356 @@ k -n kube-system -c cilium-agent logs cilium-9pshw --timestamps=true | grep "Pol
 ```
 
 Note that `cilium-9pshw` is the name of the Cilium agent Pod.
+
+## Open Policy Agent
+
+Open Policy Agent (OPA) is an extension that can be added to a Kubernetes cluster, that allow us to add custom policies to enforce security and compliance requirements.
+
+- Request workflow and admission control
+- Pod security standards
+- Introduction to OPA and Gatekeeper
+
+### Request Workflow and Admission Control
+
+As a reminder, the request workflow in Kubernetes is as follows:
+
+1. Any request is first authenticated. *Tell me who you are. I'll tell if you can come in...*
+2. If the request is authenticated, it is authorized. *Tell me what you want to do. I'll tell if you can do it...*
+3. If the request is authorized, it is admitted. *Before I proceed with your request, I need to validate and/or modify it...*
+
+Most of the Security Enforcement in Kubernetes is done at the admission control level (step 3). OPA, Kyverno, Pod Security Standards, etc... come qwith their own admission controllers.
+
+### Introduction to Pod Security Standards
+
+Resources:
+
+- [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
+- [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/)
+
+It define three different policies. They are cumulative and range from highly permissive to highly restrictive:
+
+- **Prviliged**: Unrestricted policy, it allows for known privilege escalation.
+- **Baseline**: Minimally restrictive policy which prevent known privilege escalations.
+- **Restricted**: Highly restrictive policy, following current Pod hardening best practices.
+
+#### Policy Instantiation
+
+The policies definitions are decoupled from their instantiation. This allow a common understanding and acceptance of the policies, independently of their enforcement mechanism.
+
+The [Pod Security Admission Controller](https://kubernetes.io/docs/concepts/security/pod-security-admission/) is a built-in mechanism that can enforce the Pod Security Standards at a namespace level. It is enabled by adding labels to the namespace.
+
+At least a namespace must have the following labels to enforce the Pod Security Standards:
+
+```yaml
+# The per-mode level label indicates which policy level to apply for the mode.
+#
+# MODE must be one of `enforce`, `audit`, or `warn`.
+# LEVEL must be one of `privileged`, `baseline`, or `restricted`.
+pod-security.kubernetes.io/<MODE>: <LEVEL>
+
+# Optional: per-mode version label that can be used to pin the policy to the
+# version that shipped with a given Kubernetes minor version (for example v1.32).
+#
+# MODE must be one of `enforce`, `audit`, or `warn`.
+# VERSION must be a valid Kubernetes minor version, or `latest`.
+pod-security.kubernetes.io/<MODE>-version: <VERSION>
+```
+
+The `<MODE>` can be one of the followings:
+
+- `enforce`: Policy violations will cause the Pod to be rejected.
+- `audit`: Policy violations will be logged as an annotation to the event recorded in the audit log. The Pod will be admitted.
+- `warn`: Policy violations will trigger a user-facing warning, but the Pod will be admitted.
+
+The `<LEVEL>` can be one of `privileged`, `baseline`, or `restricted`.
+
+The `<VERSION>` can be a valid Kubernetes minor version, or `latest`.
+
+#### Hands-on Pod Security Standards
+
+Lets create three namespaces with the different policies:
+
+```bash
+# Connect to the cluster
+vagrant ssh vm1
+# Move to the directory
+cd /vagrant/formation/17-opa
+# Create the namespaces
+k apply -f privileged__ns.yaml
+k apply -f baseline__ns.yaml
+k apply -f restricted__ns.yaml
+```
+
+Now, we can create a Pod in each namespace:
+
+```bash
+# Create a Pod in each namespace
+k -n privileged apply -f pod.yaml
+k -n baseline apply -f pod.yaml
+k -n restricted apply -f pod.yaml
+```
+
+All pods should be created successfully. Only for the `restricted` namespace, a warning should be displayed.
+
+Delete the pods, then update the namespaces to enforce the policies:
+
+```bash
+# Delete the pods
+k -n privileged delete pod nginx --grace-period=0 --force
+k -n baseline delete pod nginx --grace-period=0 --force
+k -n restricted delete pod nginx --grace-period=0 --force
+# Keep only the restricted namespace
+k delete ns privileged
+k delete ns baseline
+# Update the namespaces
+k label ns restricted pod-security.kubernetes.io/warn-
+k label ns restricted pod-security.kubernetes.io/warn-version-
+k label ns restricted pod-security.kubernetes.io/audit=restricted
+k label ns restricted pod-security.kubernetes.io/audit-version=v1.31
+```
+
+Now we need to update the kube-apiserver configuration to enable an audit policy, thus starting auditing the cluster. To do so, we need to mount a file (e.g. `audit-policy.yaml`) in the container.
+
+```shell
+sudo mkdir -p /etc/kubernetes/audit
+sudo cp audit-policy.yaml /etc/kubernetes/audit/policy.yaml
+sudo mkdir -p /var/log/kubernetes/audit
+```
+
+Then add a volume exposing this audit directories in the `kube-apiserver` Pod and mount them in the container. Edit the PodSpec directly.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+# ...
+  name: kube-apiserver
+  namespace: kube-system
+# ...
+containers:
+  - command:
+    - kube-apiserver
+    - --audit-policy-file=/etc/kubernetes/audit/policy.yaml
+    - --audit-log-path=/var/log/kubernetes/audit/audit.log
+# ...
+    volumeMounts:
+#...
+    - mountPath: /etc/kubernetes/audit
+      name: k8s-audit
+      readOnly: true
+    - mountPath: /var/log/kubernetes/audit
+      name: k8s-audit-log
+      readOnly: false
+# ...
+volumes:
+# ...
+- hostPath:
+    path: /etc/kubernetes/audit
+    type: DirectoryOrCreate
+  name: k8s-audit
+- hostPath:
+    path: /var/log/kubernetes/audit
+    type: DirectoryOrCreate
+  name: k8s-audit-log
+# ...
+```
+
+```bash
+# Create the Pod
+k -n restricted apply -f pod.yaml
+```
+
+The logs should show a warning about the Pod not being compliant with the Pod Security Standards.
+
+TODO: Rework the audit policy file to concern only the Pod Security Standards.
+
+TODO: Display a command to show the audit logs.
+
+Remove the pod (`k -n restricted delete pod nginx --grace-period=0 --force`), then update the namespace to enforce the policy:
+
+```bash
+k label ns restricted pod-security.kubernetes.io/audit-
+k label ns restricted pod-security.kubernetes.io/audit-version-
+k label ns restricted pod-security.kubernetes.io/enforce=restricted
+k label ns restricted pod-security.kubernetes.io/enforce-version=v1.31
+```
+
+Recreate the pod, it should be rejected.
+
+### Introduction to OPA and Gatekeeper
+
+- OPA (Open Policy Agent) is a general-purpose policy engine that can be used to enforce policies across the stack.
+- Not Kubernetes-specific
+- Offers easy implementation of policies (Rego language)
+- Works with JSON/YAML
+- In K8s, it uses Admission Controllers
+- Unaware of concepts like Pods, Deployments, etc...
+- Gatekeeper ease the use OPA in Kubernetes
+- It provides CRDs
+
+#### OPA - Gatekeeper CRDS
+
+- `ConstraintTemplate`
+- `Constraint`
+
+#### Hands-on OPA - Gatekeeper
+
+First, install OPA Gatekeeper. We use online resources:
+
+```bash
+curl -Lo install/gatekeeper.yaml  https://raw.githubusercontent.com/killer-sh/cks-course-environment/master/course-content/opa/gatekeeper.yaml
+k apply -f install/gatekeeper.yaml
+```
+
+Let's create `DenyAll` policy:
+
+```bash
+# Fetch the template
+curl -Lo deny-all/alwaysdeny_template.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deny-all/alwaysdeny_template.yaml
+# Fetch the constraint
+curl -Lo deny-all/all_pod_always_deny.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deny-all/all_pod_always_deny.yaml
+k apply -f deny-all/alwaysdeny_template.yaml
+k apply -f deny-all/all_pod_always_deny.yaml
+```
+
+Now, create a Pod:
+
+```bash
+k apply -f pod.yaml
+```
+
+The Pod should be rejected.
+
+Now we want to enforce certain label on namespaces.
+
+```bash
+# Fetch the template
+curl -Lo namespace-labels/k8srequiredlabels_template.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/namespace-labels/k8srequiredlabels_template.yaml
+# Fetch the constraints
+curl -Lo namespace-labels/all_ns_must_have_cks.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/namespace-labels/all_ns_must_have_cks.yaml
+curl -Lo namespace-labels/all_pod_must_have_cks.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/namespace-labels/all_pod_must_have_cks.yaml
+```
+
+Let's create the Gatekeeper policy:
+
+```bash
+# Create the Gatekeeper policy template
+k apply -f namespace-labels/k8srequiredlabels_template.yaml
+# Create the Gatekeeper policy constraint
+k apply -f namespace-labels/all_ns_must_have_cks.yaml
+```
+
+Check the CRDs:
+
+```bash
+k get crd
+```
+
+It should list the `k8srequiredlabels.constraints.gatekeeper.sh` CRD.
+
+Now list those resources:
+
+```bash
+k get k8srequiredlabels
+```
+
+It should list the `ns-must-have-cks` constraint.
+
+List thr current violations of the constraint by describing the constraint:
+
+```bash
+k describe k8srequiredlabels ns-must-have-cks
+```
+
+It should list the violations. Among them, the `default` namespace should be listed.
+
+Let's fix the violation by adding the required label to the `default` namespace:
+
+```bash
+k label ns default cks=false
+```
+
+After a few seconds, the violation should disappear.
+
+Now, let's create a new namespace:
+
+```bash
+k create ns test
+```
+
+The namespace should be rejected.
+
+Update the constraint to enforce the presence of two labels instead of one:
+
+```yaml
+# Update in the file `namespace-labels/all_ns_must_have_cks.yaml`
+# ...
+  labels: ["cks", "team"]
+```
+
+Apply the updated constraint:
+
+```bash
+k apply -f namespace-labels/all_ns_must_have_cks.yaml
+```
+
+Try again to create the `test` namespace. It should be rejected, with a message indicating that the `team` label is also missing.
+
+Create a new manifest for this namespace:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test
+  labels:
+    cks: "true"
+    team: "dev"
+```
+
+Use this manifest to create the namespace, it should be accepted.
+
+Cleanup the resources:
+
+```bash
+k delete -f namespace-labels/all_ns_must_have_cks.yaml
+k delete -f namespace-labels/k8srequiredlabels_template.yaml
+k delete ns test
+```
+
+Let's move on to deploy constraints on deployments. First, fetch the resources:
+
+```bash
+# Fetch the template
+curl -Lo deployment-replica-count/k8sminreplicacount_template.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deployment-replica-count/k8sminreplicacount_template.yaml
+# Fetch the constraints
+curl -Lo deployment-replica-count/all_deployment_must_have_min_replicacount.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/opa/deployment-replica-count/all_deployment_must_have_min_replicacount.yaml
+```
+
+Create the Gatekeeper policy:
+
+```bash
+# Create the Gatekeeper policy template
+k apply -f deployment-replica-count/k8sminreplicacount_template.yaml
+# Create the Gatekeeper policy constraint
+k apply -f deployment-replica-count/all_deployment_must_have_min_replicacount.yaml
+```
+
+Let's create a deployment without enough replicas:
+
+```bash
+k create deployment nginx --image=nginx --replicas=1
+```
+
+It should be rejected.
+
+Now, let's create a deployment with enough replicas:
+
+```bash
+k create deployment nginx --image=nginx --replicas=2
+```
+
+It should be accepted.
 
 ## Image Footprint
 
@@ -1485,3 +1835,212 @@ chmod +x run.sh
 ```
 
 Review the advices and fix the issues.
+
+## Scan images for known vulnerabilities
+
+- Applications packaged within images may contain vulnerabilities.
+- Those vulnerabilities can be exploited by attackers to compromise the system.
+- They may live in different layers of the image.
+- Scanning images for known vulnerabilities is a good practice to prevent security breaches. Scanning tools should be able to detect vulnerabilities in the base image, dependencies, and application code.
+- Such tools make use of vulnerability databases:
+  - [NVD](https://nvd.nist.gov/)
+  - [Mitre](https://cve.mitre.org/)
+  - etc.
+- Vulnerabilities can be discovered at different stages:
+  - At build time: before the image is pushed to the registry.
+  - Within the registry: after the image is pushed.
+  - At runtime: after the image is deployed.
+  - At admission control: before the image is deployed.
+
+### Scanning tools
+
+#### [Clair](https://github.com/quay/clair)
+
+- Open-source project for the static analysis of vulnerabilities in application containers.
+- It can ingest vulnerabilities from different sources (databases like Mitre or NVD).
+- It provides API
+
+#### [Trivy](https://trivy.dev/latest/)
+
+- Open-source project for scanning vulnerabilities in containers.
+- It can scan images for vulnerabilities in the OS packages, application dependencies, and language-specific packages.
+
+##### Run `trivy` with Docker
+
+```bash
+sudo docker run aquasec/trivy image nginx
+```
+
+It will fetch the latest database and scan the image for vulnerabilities.
+
+Run the same command but filtering results with the `CRITICAL` severity:
+
+```bash
+sudo docker run aquasec/trivy --severity CRITICAL image nginx
+```
+
+Extra: Avoid fetching the database every time by mounting the cache directory:
+
+```bash
+sudo docker run -v $HOME/.cache/trivy:/root/.cache/trivy aquasec/trivy --severity CRITICAL image nginx
+```
+
+## Secure Supply Chain
+
+- The supply chain - in this context - involve the process of delivering software from the developer to the end user.
+- The supply chain is a critical part of the software development process, and it is important to ensure that the software is delivered securely.
+
+### Private registries
+
+- Similar to *public registries*, private registries are used to store and distribute software packages.
+- Additionnaly, they offer more control over who can access the packages. Oftenly, they aren't accessible from outside the organization's network and require authentication to access a package.
+- Within the kubernetes cluster, the authentication process would be handled by the container runtime. The crendentials must be provided in order to pull images.
+
+#### Hands-on private registries
+
+Here, we will list all image regitries used in the cluster. Then we'll see how to use digest for the kube-apiserver.
+
+```bash
+k get pods -A -o jsonpath='{.items[*].spec.containers[*].image}' | tr -s '[[:space:]]' '\n' | sort | uniq
+```
+
+This would return a list of images: some from recognized public registries, and some induced `docker.io` registry (which is a public registry). Within this list, we can see some images defined by their digest and others by their tag. As an example `kube-apiserver` is defined  by its tag.
+
+Let's see with digest is associated to this tag:
+
+```bash
+k -n kube-system get pod kube-apiserver-cks-master -o jsonpath='{.status.containerStatuses[0].imageID}'
+```
+
+The `status` field contains the `imageID` field which is the digest of the image.
+
+Replace with this value the definition of the `kube-apiserver` image in the `/etc/kubernetes/manifests` directory. After its restart the pod should use the digest instead of the tag.
+
+Let's see now how to use OPA to whitelist registries. If needed run the following commands to install OPA in the cluster:
+
+```bash
+# Connect to VM1
+vagrant ssh vm1
+# Move to the right directory
+cd 21-secure-supply-chain
+# Fetch the OPA install resources
+curl -Lo gatekeeper.yaml  https://raw.githubusercontent.com/killer-sh/cks-course-environment/master/course-content/opa/gatekeeper.yaml
+k apply -f gatekeeper.yaml
+```
+
+Then, fetch the resources:
+
+```bash
+curl -Lo k8strustedimages_template.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/supply-chain-security/secure-the-supply-chain/whitelist-registries/opa/k8strustedimages_template.yaml
+curl -Lo all_pod_must_have_trusted_images.yaml https://raw.githubusercontent.com/killer-sh/cks-course-environment/refs/heads/master/course-content/supply-chain-security/secure-the-supply-chain/whitelist-registries/opa/all_pod_must_have_trusted_images.yaml
+```
+
+From the list of all images used in cluster computed earlier, keep  the different repositories and ensure each is allowed by editing the `k8strustedimages_template.yaml` just downloaded.
+
+Apply the contraint template then the constraint. Check the number of violations:
+
+```bash
+k apply -f k8strustedimages_template.yaml
+k apply -f all_pod_must_have_trusted_images.yaml
+k describe k8strustedimages.constraints.gatekeeper.sh pod-trusted-images
+```
+
+There should be some violations.
+
+Now try to create a simple pod:
+
+```bash
+k run nginx --image=nginx
+```
+
+It should be rejected! From now on, to create successfully a pod, the registry must be supplied, like `k run nginx --image=docker.io/nginx`.
+
+### [ImagePolicyWebhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#imagepolicywebhook)
+
+Basically, it is an admission controller that delegate to a webhook decisions during admission.
+
+Let's enable it and observe how it works. Before ensure OPA is uninstalled:
+
+```bash
+k delete -f all_pod_must_have_trusted_images.yaml
+k delete -f k8strustedimages_template.yaml
+k delete -f gatekeeper.yaml
+```
+
+Once OPA has been cleaned up, edit `/etc/kubernetes/manifests/kube-apiserver.yaml` and update the list of enabled admission plugins by adding `ImagePolicyWebhook`.
+
+The `kube-apiserver` pod should fail to restart, search for its logs whitin the directory `/var/log/pod/kube-system_kube-apiserver...`. It should complain about missing configuration. Read more about it in the [official documentation](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#imagereview-config-file-format).
+
+Start by creating a file `/etc/kubernetes/admission/image-policy-webhook.conf` with the following content:
+
+```yaml
+imagePolicy:
+  kubeConfigFile: /etc/kubernetes/admission/image-policy-webhook_kubeconfig.yaml
+  # time in s to cache approval
+  allowTTL: 50
+  # time in s to cache denial
+  denyTTL: 50
+  # time in ms to wait between retries
+  retryBackoff: 500
+  # determines behavior if the webhook backend fails
+  defaultAllow: false
+```
+
+Then create a file `/etc/kubernetes/admission/admission-control.conf` with the following content:
+
+```yaml
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+  - name: ImagePolicyWebhook
+    path: /etc/kubernetes/admission/image-policy-webhook.conf
+```
+
+Then, create a file `/etc/kubernetes/admission/image-policy-webhook_kubeconfig.yaml` with the following content:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: image-checker
+  cluster:
+    certificate-authority: /etc/kubernetes/admission/ca.pem    
+    server: https://images.example.com/policy
+
+contexts:
+- context:
+    cluster: image-checker
+    user: api-server
+  name: image-checker
+current-context: image-checker
+preferences: {}
+
+users:
+- name: api-server
+  user:
+    client-certificate: /etc/kubernetes/admission/cert.pem
+    client-key: /etc/kubernetes/admission/key.pem
+```
+
+Finally, create the ca, cert and key files:
+
+```bash
+# Switch to su
+sudo su
+# Create the directory, then move to it
+mkdir -p /etc/kubernetes/admission
+cd /etc/kubernetes/admission
+# Create the ca, cert and key files
+openssl genrsa -out ca.key 4096
+openssl req -x509 -new -nodes -key ca.key -subj "/CN=external-service" -days 10000 -out ca.pem
+openssl genrsa -out key.pem 4096
+openssl req -x509 -new -key key.pem -out cert.pem -subj "CN=image-policy-webhook"
+# Leave su
+exit
+```
+
+Then configure the `kube-apiserver` pod to use the new configuration: amongst the list of arguments, add `--admission-control-config-file=/etc/kubernetes/admission/admission-control.conf`.
+
+From now on, the new admission controller `ImagePolicyWebhook` would forbid the creation of pods, since the remote service is unreachable and the default behavior is to deny. Try it, it should fail.
+
+Update the default behavior to `true` to allow back pod creation.
