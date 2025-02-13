@@ -1,0 +1,6 @@
+*
+!.gitignore
+!README.md
+!credit-card_secret.yaml
+!apache_pod.yaml
+

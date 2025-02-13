@@ -2044,3 +2044,219 @@ Then configure the `kube-apiserver` pod to use the new configuration: amongst th
 From now on, the new admission controller `ImagePolicyWebhook` would forbid the creation of pods, since the remote service is unreachable and the default behavior is to deny. Try it, it should fail.
 
 Update the default behavior to `true` to allow back pod creation.
+
+## Behavioral Analytics at host and container level
+
+- `syscall` and processes
+- `strace` and `/proc`
+- Tools and scenarios
+
+### Kernel vs User Space
+
+Quick reminder, a computer can be represented as a stack of layers, such as:
+
+- Hardware
+- Linux Kernel (Kernel Space)
+- Syscall Interface (Kernel Space), like getpid(), reboot(), etc.
+- Libraries (User Space), like `glibc`, `libxyz`, etc.
+- Applications (User Space), like `Firefox`, `curl`, etc.
+
+Applications can communicate with the syscall interface directly or through libraries.
+
+The syscall interface relay the requests to the kernel, which then interacts with the hardware.
+
+There are tools like `seccomp` or `apparmor` that operate between the User space and the Syscall Interface to filter, regulate or block requests.
+
+This description is applicable to both the host and the containers. The difference is that containers share the same kernel as the host.
+
+### System calls
+
+There are many system calls, have a look at the [online version of `man syscall`](https://man7.org/linux/man-pages/man2/syscalls.2.html).
+
+Basically, a system call is a request for a service made by an application to the operating system's kernel. It is a way for programs to interact with the operating system.
+
+### `strace`
+
+Tool that intercepts and logs system calls made by a process. It also log and display ssignals received by a process.
+
+### Hands-on `strace`
+
+```bash
+strace ls /etc
+```
+
+It will display all the system calls made by the `ls` command.
+
+```bash
+strace -cw ls /
+```
+
+It will display a summary of the system calls made by the `ls` command. It will also display the count and time spent in each system call.
+
+### `/proc`
+
+- This directory contains information and connections to processes and kernel.
+- It's a good place to learn how processes work.
+- It's also importante for configuration and administrative tasks.
+- It contains files that don't exist, yet you can access these.
+
+### Hands-on `/proc`
+
+Let's focus on `strace` of Kubernetes `etcd`. We want to:
+
+1. List syscalls
+2. Find open files
+3. Read secret value
+
+```bash
+# Connect to VM1
+vagrant ssh vm1
+# Move to the right directory
+cd 22-behavioral-analytics
+# Ensure etcd is running
+sudo crictl ps | grep etcd
+# Get the PID of etcd
+export ETCD_PID=$(sudo crictl inspect $(sudo crictl ps | grep etcd | cut -d' ' -f1) | jq '.info.pid')
+# Lists syscalls
+sudo strace -p $ETCD_PID -f -cw
+```
+
+After a few seconds, stop the `strace` command. It will display a summary of the system calls made by the `etcd` process.
+
+Let's find open files:
+
+```bash
+sudo ls -lh /proc/$ETCD_PID/fd
+```
+
+This will list the files opened by the `etcd` process. Most are sockets, some are actual files. We can read the content of the file `/var/lib/etcd/member/snap/db`:
+
+```bash
+export SNAP_DB_ID=$(sudo ls -l /proc/$ETCD_PID/fd | grep "/var/lib/etcd/member/snap/db" | cut -d' ' -f9)
+sudo tail /proc/$ETCD_PID/fd/$SNAP_DB_ID
+```
+
+It will display the content of the file. It contains data that aren't easily readable.
+
+Now let's try to read the content of a secret:
+
+```bash
+# First let's create a secret
+k apply -f credit-card_secret.yaml
+# Install binutils to be able to use `strings`
+sudo apt install -y binutils
+# Find the name of the secret in the /var/lib/etcd/member/snap/db file
+sudo cat /proc/$ETCD_PID/fd/$SNAP_DB_ID | strings | grep credit-card -A10 -B10
+```
+
+It should display some data related to the secret. We can even ensure we can see the secret value:
+
+```bash
+sudo cat /proc/$ETCD_PID/fd/$SNAP_DB_ID | strings | grep 1111222233334444 -A2 -B10
+```
+
+It should display the secret value, not even encoded...
+
+Let's continue to explore the `/proc` directory:
+
+```bash
+# Create an Apache pod with a secret.
+k apply -f apache_pod.yaml
+# List environment variables of the Apache pod, ensure $SECRET is present
+k exec apache -- env | grep SECRET
+```
+
+Now, let's find where the Apache process is running:
+
+```bash
+k get pod apache -o jsonpath='{.spec.nodeName}'
+```
+
+Then, connect to the node and find the PID of the Apache process:
+
+```bash
+# Connect to the node, adapt the vm name
+vagrant ssh vm2
+# Move to the right directory
+cd 22-behavioral-analytics
+# Get the PID of the Apache process
+export APACHE_PID=$(sudo crictl inspect $(sudo crictl ps | grep apache | cut -d' ' -f1) | jq '.info.pid')
+```
+
+We'll use `pstree` to describe the whole hierarchy of the apache process, running in a container:
+
+```bash
+sudo pstree -p $APACHE_PID
+```
+
+It should display a hierarchy of processes composing the Apache process.
+
+Let's display the `proc` description of the Apache process:
+
+```bash
+sudo ls -lh --color /proc/$APACHE_PID
+```
+
+Amongst the pseudo-files and directories, we can find the `environ` file, which contains the environment variables of the process. Let's see if it contains the $SECRET variable:
+
+```bash
+sudo cat /proc/$APACHE_PID/environ | strings | grep SECRET
+```
+
+It should display the value of the $SECRET variable, in plain sight!!!
+
+#### Extra: get the Apache secret value without `sudo`
+
+We saw how to get the secret value from the Apache process, but we used `sudo` to access the `/proc` directory. Let's see how to do it without `sudo`.
+
+The trick is to start a *debug* pod on the node, then use `nsenter` to enter the Apache process namespace.
+
+We need still need to get the node where the Apache pod has been scheduled:
+
+```bash
+# Connect to VM1
+vagrant ssh vm1
+# Move to the right directory
+cd 22-behavioral-analytics
+# Get the node name
+export APACHE_NODE_NAME=$(k get pod apache -o jsonpath='{.spec.nodeName}')
+```
+
+Then, create a debug pod on the node:
+
+```bash
+k debug nodes/$APACHE_NODE_NAME --image=debian -it -- bash
+```
+
+The interactive shell should be started as root... Now let's `chroot` to the `/host` directory:
+
+```bash
+chroot /host bash
+```
+
+From now on, we are `root` on the host filesystem. We may proceed like before but without `sudo`:
+
+```bash
+export APACHE_PID=$(crictl inspect $(crictl ps | grep apache | cut -d' ' -f1) | jq '.info.pid')
+cat /proc/$APACHE_PID/environ | strings | grep SECRET
+```
+
+It should display the secret value.
+
+This emphasizes the importance of securing the access to the kubernetes API and **NEVER** allow `debug` pods on nodes. It might be handled with the use of RBAC.
+
+### [Falco](https://falco.org/)
+
+- Cloud-native runtime security (CNCF)
+- Provides different areas of expertise:
+  - ACCESS:
+      Deep kernel tracing built on the Linux kernel
+  - ASSERT:
+      Describe security rules against a system (+default ones)
+      Detect unwanted behaviour
+  - ACTION
+      Automated respond to a security violations
+
+### Hands-on Falco
+
+TODO
