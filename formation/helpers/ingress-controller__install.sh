@@ -1,15 +1,16 @@
 #!/bin/env bash
 
-l_helpers_rootl_helpers_root=$( dirname -- "${BASH_SOURCE[0]}" | xargs readlink -f)
+l_helpers_root=$( dirname -- "${BASH_SOURCE[0]}" | xargs readlink -f)
 
 bash $l_helpers_root/helm__install.sh
 
-
-if [ ! dpkg -l | grep -q jq ]; then
+if ! command -v jq &> /dev/null
+then
     sudo apt install -y jq
 fi
 
-if [ helm repo list --output json | jq -e '. | map(.name == "ingress-nginx") | any | not' ]; then
+if $(helm repo list --output json | jq -e '. | map(.name == "ingress-nginx") | any | not')
+then
     helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 fi
 

@@ -2259,4 +2259,73 @@ This emphasizes the importance of securing the access to the kubernetes API and 
 
 ### Hands-on Falco
 
+Install `falco` on a worker:
+
+```bash
+# Connect to VM2
+vagrant ssh vm2
+# Move to the right directory
+cd 22-behavioral-analytics
+# Add the Falco repository
+curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | sudo gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
+sudo bash -c 'cat << EOF > /etc/apt/sources.list.d/falcosecurity.list
+deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main
+EOF'
+# Install Falco
+sudo apt update -y && sudo apt install -y falco
+# Ensure Falco is running
+sudo systemctl status falco-modern-bpf.service
+# See Falco in action: trigger a violation
+sudo cat /etc/shadow > /dev/null
+# Check the Falco logs
+sudo journalctl _COMM=falco -p warning
+```
+
+It should display a warning about the access to the `/etc/shadow` file.
+
+### Extra1: Falco rules
+
 TODO
+
+### Extra2: Display Falco event in UI (Falcosidekick UI)
+
+First, install [`falcosidekick`](https://github.com/falcosecurity/falcosidekick):
+
+```bash
+# Connect to VM1
+vagrant ssh vm1
+# Move to the right directory
+cd 22-behavioral-analytics/falcosidekick
+# Add the Falcosidekick repository
+helm repo add falcosecurity https://falcosecurity.github.io/charts
+helm repo update
+# Create the falcosidekick namespace
+k create ns falcosidekick
+# Create the mandatory secrets
+k -n falcosidekick create secret tls falcosidekick-ui-tls --cert=../../pki/certs/local-ingress.cert.pem --key=../../pki/private/local-ingress.key.pem
+
+# Install Falcosidekick
+helm install falcosidekick falcosecurity/falcosidekick --values falcosidekick-values.yaml --namespace falcosidekick
+```
+
+The UI should be available at [https://falcosidekick-ui.127.0.0.1.nip.io:8443](https://falcosidekick-ui.127.0.0.1.nip.io:8443). The browser will complain about the certificate, but it's normal since it's a self-signed certificate.
+
+Update the Falco configuration to send events to the Falcosidekick:
+
+```bash
+# Connect to VM2
+vagrant ssh vm2
+# Move to the right directory
+cd 22-behavioral-analytics/falco
+# Update the Falco configuration
+sudo cp 01-falcosidekick-output.yaml /etc/falco/config.d/
+# Restart Falco
+sudo systemctl restart falco-modern-bpf.service
+```
+
+At this point, no events should be displayed... There are two issues:
+
+- The Falco configuration is not correct, it should point to the Falcosidekick service IP.
+- The Falcosidekick service has no endpoint, its `selector` must be updated.
+
+Once fixed the issues, the Falco events should be displayed in the Falcosidekick UI.

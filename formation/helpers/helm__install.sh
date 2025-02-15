@@ -8,9 +8,8 @@ fi
 
 if ! grep -q 'source <(helm completion bash)' $HOME/.bashrc; then
     echo 'source <(helm completion bash)' >> $HOME/.bashrc
+    echo
+    echo
+    echo 'helm installed successfully'
+    echo 'source $HOME/.bashrc to load helm completion'
 fi
-
-echo
-echo
-echo 'helm installed successfully'
-echo 'source $HOME/.bashrc to load helm completion'

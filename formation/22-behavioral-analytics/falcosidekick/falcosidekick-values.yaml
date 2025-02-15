@@ -1,0 +1,20 @@
+replicaCount: 1
+
+service.annotations."prometheus\.io/scrape": false
+
+webui:
+  enabled: true
+  replicaCount: 1
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+    - host: falcosidekick-ui.127.0.0.1.nip.io
+      paths:
+      - path: /
+    tls:
+    - secretName: falcosidekick-ui-tls
+      hosts:
+      - falcosidekick-ui.127.0.0.1.nip.io
+  redis:
+    storageEnabled: false

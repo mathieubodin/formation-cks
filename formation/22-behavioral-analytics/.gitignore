@@ -3,4 +3,8 @@
 !README.md
 !credit-card_secret.yaml
 !apache_pod.yaml
+!falco/
+!falco/01-falcosidekick-output.yaml
+!falcosidekick/
+!falcosidekick/falcosidekick-values.yaml
 
