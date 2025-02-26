@@ -1633,6 +1633,56 @@ k create deployment nginx --image=nginx --replicas=2
 
 It should be accepted.
 
+### Extra: [Kyverno](https://kyverno.io/)
+
+It is an alternative to OPA Gatekeeper. It is a policy engine designed for Kubernetes. It can be used to enforce policies across the stack.
+
+Resources:
+
+- [Getting Started with Kyverno](https://kyverno.io/docs/introduction/#quick-start-guides)
+- [Install Kyverno using Helm](https://kyverno.io/docs/installation/methods/#install-kyverno-using-helm)
+
+Let's install Kyverno using Helm:
+
+```bash
+# Connect to vm1
+vagrant ssh vm1
+# Move to the right directory
+cd 17-opa/kyverno
+# Add the Kyverno Helm repository
+helm repo add kyverno https://kyverno.github.io/kyverno/
+helm repo update
+# Install Kyverno (standalone)
+helm install kyverno kyverno/kyverno --namespace kyverno --create-namespace
+```
+
+Let's add `policy-reporter` to ease the policy enforcement:
+
+```bash
+# Add the Kyverno Helm repository
+helm repo add policy-reporter https://kyverno.github.io/policy-reporter
+helm repo update
+# Create the mandatory secret
+k -n kyverno create secret tls policy-reporter-tls --cert=../../pki/certs/local-ingress.cert.pem --key=../../pki/private/local-ingress.key.pem
+# Install Kyverno-Policy-Reporter
+helm install policy-reporter policy-reporter/policy-reporter --namespace kyverno --create-namespace --values helm-values.yaml
+```
+
+Add a policy to enforce the presence of a label on namespaces:
+
+```bash
+# Create the policy
+k apply -f rules/requires-label.yaml
+```
+
+Now, let's create a pod without the required label:
+
+```bash
+k apply -f apache_pod.yaml
+```
+
+It should be accepted, but the policy should be violated. You would find the violation in the pod's description. Also the [policy reporter UI](https://kyverno-policy-reporter.127.0.0.1.nip.io:8443) should display the violation.
+
 ## Image Footprint
 
 - Containers and Docker

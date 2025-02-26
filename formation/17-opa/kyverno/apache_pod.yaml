@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: apache
+  name: apache
+spec:
+  containers:
+  - image: httpd
+    name: apache
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always

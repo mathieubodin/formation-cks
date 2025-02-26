@@ -1,0 +1,21 @@
+replicaCount: 1
+ui:
+  replicaCount: 1
+  banner: CKS Extra Kyverno
+  name: cks-lab
+  enabled: true
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+    - host: kyverno-policy-reporter.127.0.0.1.nip.io
+      paths:
+      - path: /
+        pathType: ImplementationSpecific
+    tls:
+    - secretName: policy-reporter-tls
+      hosts:
+      - kyverno-policy-reporter.127.0.0.1.nip.io
+plugin:
+  kyverno:
+    enabled: true
